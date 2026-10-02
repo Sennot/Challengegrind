@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0c0c0e;
+  --color-surface: #141417;
+  --color-surface-2: #1b1b1f;
+  --color-surface-3: #25252a;
+  --color-line: #26262b;
+  --color-muted: #8e8e98;
+  --color-brand: #f27a1a;
+  --color-brand-2: #f59a4a;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-bg text-neutral-200 antialiased;
+  }
+  ::selection {
+    background: rgb(242 122 26 / 0.3);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-surface-3) transparent;
+  }
+}
+
+@utility card {
+  @apply rounded-xl border border-line bg-surface;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand text-black hover:bg-brand-2;
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-surface-2 text-neutral-200 hover:bg-surface-3;
+}
+@utility btn-danger {
+  @apply btn border border-red-500/25 bg-transparent text-red-400 hover:bg-red-500/10;
+}
+@utility input {
+  @apply w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-neutral-100 outline-none transition-colors placeholder:text-neutral-500 focus:border-brand/60;
+}
+@utility label {
+  @apply mb-1.5 block text-xs font-medium text-muted;
+}
