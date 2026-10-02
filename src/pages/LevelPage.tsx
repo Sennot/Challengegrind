@@ -69,10 +69,11 @@ export default function LevelPage() {
 
       <VideoEmbed url={level.video_url} title={level.name} />
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
         <Stat label="Points" value={formatPoints(levelPoints(level.position))} />
         <Stat label="Position" value={`#${level.position}`} />
         <Stat label="Victors" value={String(victors.length)} />
+        <Stat label="FPS" value={level.fps ?? "—"} />
         <div className="card p-3">
           <div className="text-xs text-muted">Level ID</div>
           {level.gd_id ? (

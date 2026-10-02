@@ -27,6 +27,8 @@ export interface Level {
   verifier_id: string | null;
   gd_id: number | null;
   video_url: string | null;
+  /** e.g. "240", "CBF" */
+  fps: string | null;
   position: number;
   created_at: string;
 }

@@ -85,6 +85,13 @@ function LevelCard({ level }: { level: Level }) {
           <h3 className="truncate text-base font-semibold text-white sm:text-lg">{level.name}</h3>
           <p className="truncate text-sm text-neutral-400">
             {level.creator} <span className="text-neutral-600">·</span> verified by {level.verifier}
+            {level.fps && (
+              <>
+                {" "}
+                <span className="text-neutral-600">·</span> {level.fps}
+                {/^\d+$/.test(level.fps) ? " FPS" : ""}
+              </>
+            )}
           </p>
         </div>
         <div className="shrink-0 text-right">

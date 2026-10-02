@@ -6,13 +6,14 @@ import type { Level } from "../../lib/types";
 import { isHttpsUrl } from "../../lib/video";
 import { ErrorBox, PositionBadge, Spinner } from "../../components/ui";
 
-type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string };
-const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "" };
+type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string; fps: string };
+const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "", fps: "" };
 
 function validate(d: Draft): string | null {
   if (!d.name.trim() || !d.creator.trim() || !d.verifier.trim()) return "Fill in name, creator and verifier";
   if (d.gd_id && !/^\d+$/.test(d.gd_id)) return "Level ID must be digits only";
   if (d.video_url && !isHttpsUrl(d.video_url)) return "Video must be an https:// link";
+  if (d.fps && !/^[A-Za-z0-9 /+.-]{1,20}$/.test(d.fps.trim())) return "FPS: e.g. 240 or CBF";
   return null;
 }
 
@@ -29,7 +30,8 @@ function DraftFields({ d, set }: { d: Draft; set: (d: Draft) => void }) {
       {f("creator", "Creator(s)")}
       {f("verifier", "Verifier")}
       {f("gd_id", "Level ID", "optional")}
-      <div className="sm:col-span-2">{f("video_url", "Verification video", "https://youtu.be/…")}</div>
+      {f("fps", "FPS", "FPS or CBF")}
+      <div>{f("video_url", "Verification video", "https://youtu.be/…")}</div>
     </div>
   );
 }
@@ -55,6 +57,7 @@ export default function LevelsTab() {
       p_gd_id: draft.gd_id ? Number(draft.gd_id) : null,
       p_video_url: draft.video_url || null,
       p_position: position,
+      p_fps: draft.fps.trim() || null,
     });
     if (error) return setMsg(errorText(error));
     setMsg(`"${draft.name}" added at #${position}`);
@@ -89,6 +92,7 @@ export default function LevelsTab() {
         verifier: editDraft.verifier.trim(),
         gd_id: editDraft.gd_id ? Number(editDraft.gd_id) : null,
         video_url: editDraft.video_url.trim() || null,
+        fps: editDraft.fps.trim() || null,
       })
       .eq("id", id);
     if (error) return alert(errorText(error));
@@ -152,7 +156,7 @@ export default function LevelsTab() {
                     title="Edit"
                     onClick={() => {
                       setEditing(l.id);
-                      setEditDraft({ name: l.name, creator: l.creator, verifier: l.verifier, gd_id: l.gd_id ? String(l.gd_id) : "", video_url: l.video_url ?? "" });
+                      setEditDraft({ name: l.name, creator: l.creator, verifier: l.verifier, gd_id: l.gd_id ? String(l.gd_id) : "", video_url: l.video_url ?? "", fps: l.fps ?? "" });
                     }}
                   >
                     <Pencil className="h-4 w-4" />
