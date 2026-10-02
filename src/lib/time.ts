@@ -1,4 +1,4 @@
-const rtf = new Intl.RelativeTimeFormat("ru", { numeric: "auto" });
+const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
 const STEPS: [number, Intl.RelativeTimeFormatUnit][] = [
   [60, "second"],
@@ -20,4 +20,4 @@ export function timeAgo(iso: string): string {
 }
 
 export const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+  new Date(iso).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" });

@@ -16,12 +16,12 @@ export default function SubmitPage() {
   if (!session || !profile) {
     return (
       <div className="mx-auto max-w-xl">
-        <PageHeader title="Отправить рекорд" />
+        <PageHeader title="Submit a record" />
         <div className="card flex flex-col items-center gap-4 p-8 text-center">
-          <p className="text-sm text-muted">Отправлять рекорды могут только зарегистрированные игроки.</p>
+          <p className="text-sm text-muted">You need an account to submit records.</p>
           <div className="flex gap-2">
-            <Link to="/login" className="btn-primary">Войти</Link>
-            <Link to="/register" className="btn-ghost">Регистрация</Link>
+            <Link to="/login" className="btn-primary">Log in</Link>
+            <Link to="/register" className="btn-ghost">Sign up</Link>
           </div>
         </div>
       </div>
@@ -30,8 +30,8 @@ export default function SubmitPage() {
   if (profile.banned) {
     return (
       <div className="mx-auto max-w-xl">
-        <PageHeader title="Отправить рекорд" />
-        <ErrorBox message={`Ваш аккаунт заблокирован${profile.ban_reason ? `: ${profile.ban_reason}` : ""}. Отправка рекордов недоступна.`} />
+        <PageHeader title="Submit a record" />
+        <ErrorBox message={`Your account is banned${profile.ban_reason ? `: ${profile.ban_reason}` : ""}. You can't submit records.`} />
       </div>
     );
   }
@@ -50,20 +50,20 @@ function SubmitForm({ username }: { username: string }) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     setMsg(null);
-    if (!levelId) return setMsg({ ok: false, text: "Выберите уровень" });
-    if (!isHttpsUrl(video)) return setMsg({ ok: false, text: "Укажите ссылку на видео (https://…)" });
+    if (!levelId) return setMsg({ ok: false, text: "Choose a level" });
+    if (!isHttpsUrl(video)) return setMsg({ ok: false, text: "Enter a video link (https://…)" });
     setBusy(true);
     const { error } = await supabase.from("records").insert({ level_id: levelId, video_url: video.trim(), note: note.trim() || null });
     setBusy(false);
     if (error) {
       const text = error.message.includes("records_one_active_idx")
-        ? "У вас уже есть рекорд на этом уровне (на проверке или принят)"
+        ? "You already have a record on this level (pending or accepted)"
         : error.message.includes("too many pending")
-          ? "Слишком много рекордов на проверке (максимум 5)"
+          ? "Too many pending records (max 5)"
           : errorText(error);
       return setMsg({ ok: false, text });
     }
-    setMsg({ ok: true, text: "Рекорд отправлен на проверку." });
+    setMsg({ ok: true, text: "Record submitted." });
     setLevelId(null);
     setVideo("");
     setNote("");
@@ -71,26 +71,26 @@ function SubmitForm({ username }: { username: string }) {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Отправить рекорд" subtitle="Только 100% прохождения с видео" />
+      <PageHeader title="Submit a record" />
 
       <form onSubmit={submit} className="card flex flex-col gap-4 p-5">
         <div>
-          <label className="label">Уровень</label>
-          {levels.loading ? <div className="input text-muted">Загрузка…</div> : <LevelPicker levels={levels.data ?? []} value={levelId} onChange={setLevelId} />}
+          <label className="label">Level</label>
+          {levels.loading ? <div className="input text-muted">Loading…</div> : <LevelPicker levels={levels.data ?? []} value={levelId} onChange={setLevelId} />}
         </div>
         <div>
-          <label className="label">Ссылка на видео</label>
-          <input className="input" type="url" placeholder="https://youtu.be/… или https://t.me/…" value={video} onChange={(e) => setVideo(e.target.value)} maxLength={300} />
-          <p className="mt-1 text-xs text-neutral-500">YouTube или пост в Telegram.</p>
+          <label className="label">Video link</label>
+          <input className="input" type="url" placeholder="https://youtu.be/… or https://t.me/…" value={video} onChange={(e) => setVideo(e.target.value)} maxLength={300} />
+          <p className="mt-1 text-xs text-neutral-500">YouTube or a Telegram post.</p>
         </div>
         <div>
-          <label className="label">Комментарий (необязательно)</label>
-          <textarea className="input min-h-20 resize-y" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="FPS, CBF и т.п." />
+          <label className="label">Comment (optional)</label>
+          <textarea className="input min-h-20 resize-y" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="FPS, CBF, etc." />
         </div>
 
         <div className="flex gap-2.5 rounded-lg border border-line bg-surface-2 p-3 text-sm text-neutral-300">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-          <p>Raw footage не требуется, но не удаляйте его в течение 3 дней после подачи рекорда — администрация может его запросить.</p>
+          <p>Raw footage isn't required, but keep it for 3 days after submitting — staff may ask for it.</p>
         </div>
 
         {msg && (
@@ -98,7 +98,7 @@ function SubmitForm({ username }: { username: string }) {
             {msg.text}{" "}
             {msg.ok && (
               <Link to={`/player/${username}`} className="underline hover:text-white">
-                Статус — в профиле
+                Track it on your profile
               </Link>
             )}
           </div>
@@ -106,10 +106,10 @@ function SubmitForm({ username }: { username: string }) {
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button className="btn-primary" disabled={busy}>
-            <Send className="h-4 w-4" /> {busy ? "Отправка…" : "Отправить"}
+            <Send className="h-4 w-4" /> {busy ? "Submitting…" : "Submit"}
           </button>
           <Link to={`/player/${username}`} className="text-sm text-muted hover:text-white">
-            Мои заявки →
+            My submissions →
           </Link>
         </div>
       </form>

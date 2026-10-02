@@ -28,15 +28,15 @@ export default function StatsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title="Stats Viewer" subtitle="Рейтинг игроков по очкам. Верифер получает очки за свой уровень." />
+      <PageHeader title="Stats Viewer" />
 
       <div className="mb-4 flex flex-col gap-2.5 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input className="input pl-9" placeholder="Найти игрока" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="input pl-9" placeholder="Find a player" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <select className="input sm:w-52" value={country} onChange={(e) => setCountry(e.target.value)}>
-          <option value="">Все страны</option>
+          <option value="">All countries</option>
           {countries.map((c) => (
             <option key={c.code} value={c.code}>
               {c.name}
@@ -50,15 +50,15 @@ export default function StatsPage() {
       ) : error ? (
         <ErrorBox message={error} />
       ) : rows.length === 0 ? (
-        <Empty icon={<Trophy />}>Пока нет игроков с очками</Empty>
+        <Empty icon={<Trophy />}>No players with points yet</Empty>
       ) : (
         <div className="card overflow-hidden">
           <div className="hidden grid-cols-[3.5rem_1fr_6rem_5rem_minmax(0,1fr)] gap-4 border-b border-line px-4 py-2.5 text-xs text-muted md:grid">
             <span>#</span>
-            <span>Игрок</span>
-            <span className="text-right">Очки</span>
-            <span className="text-right">Пройдено</span>
-            <span>Сложнейший</span>
+            <span>Player</span>
+            <span className="text-right">Points</span>
+            <span className="text-right">Completed</span>
+            <span>Hardest</span>
           </div>
           <div className="divide-y divide-line">
             {rows.map((r) => (
@@ -71,7 +71,6 @@ export default function StatsPage() {
                 <span className="flex min-w-0 items-center gap-2.5">
                   <Flag code={r.country} />
                   <span className="truncate text-sm font-medium text-white">{r.username}</span>
-                  {!r.registered && <span className="hidden shrink-0 text-xs text-neutral-500 sm:inline">без аккаунта</span>}
                 </span>
                 <span className="text-right text-sm font-semibold tabular-nums text-white">{formatPoints(r.points)}</span>
                 <span className="hidden text-right text-sm tabular-nums text-muted md:block">{r.completions}</span>

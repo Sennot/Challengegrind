@@ -66,12 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         options: { captchaToken },
       });
-      if (error) throw new Error(error.message === "Invalid login credentials" ? "Неверный ник или пароль" : error.message);
+      if (error) throw new Error(error.message === "Invalid login credentials" ? "Wrong nickname or password" : error.message);
     },
     async signUp(username, password, captchaToken) {
       const { data: free, error: checkErr } = await supabase.rpc("username_available", { p_username: username });
       if (checkErr) throw new Error(checkErr.message);
-      if (!free) throw new Error("Этот ник уже занят");
+      if (!free) throw new Error("This nickname is already taken");
       const { error } = await supabase.auth.signUp({
         email: usernameToEmail(username),
         password,

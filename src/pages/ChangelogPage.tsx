@@ -28,13 +28,13 @@ export default function ChangelogPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Changelog" subtitle="Все изменения в списке" />
+      <PageHeader title="Changelog" />
       {loading && !data ? (
         <Spinner />
       ) : error ? (
         <ErrorBox message={error} />
       ) : !data?.length ? (
-        <Empty icon={<History />}>Изменений пока нет</Empty>
+        <Empty icon={<History />}>No changes yet</Empty>
       ) : (
         <>
           <div className="card divide-y divide-line">
@@ -45,7 +45,7 @@ export default function ChangelogPage() {
           {data.length >= limit && (
             <div className="mt-4 flex justify-center">
               <button className="btn-ghost" onClick={() => setLimit((l) => l + PAGE)}>
-                Показать ещё
+                Show more
               </button>
             </div>
           )}

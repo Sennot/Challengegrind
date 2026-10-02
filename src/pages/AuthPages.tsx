@@ -54,26 +54,26 @@ export function LoginPage() {
   }
 
   return (
-    <AuthCard title="Вход" icon={<LogIn className="h-5 w-5" />}>
+    <AuthCard title="Log in" icon={<LogIn className="h-5 w-5" />}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div>
-          <label className="label">Ник</label>
+          <label className="label">Nickname</label>
           <input className="input" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
         </div>
         <div>
-          <label className="label">Пароль</label>
+          <label className="label">Password</label>
           <input className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
         <Captcha onToken={setCaptcha} />
         {err && <p className="text-sm text-red-300">{err}</p>}
-        <button className="btn-primary" disabled={busy}>{busy ? "Вход…" : "Войти"}</button>
+        <button className="btn-primary" disabled={busy}>{busy ? "Logging in…" : "Log in"}</button>
         <p className="text-center text-sm text-muted">
-          Нет аккаунта?{" "}
-          <Link to="/register" className="text-white hover:underline">Регистрация</Link>
+          No account?{" "}
+          <Link to="/register" className="text-white hover:underline">Sign up</Link>
         </p>
         <p className="flex items-start gap-2 text-xs text-neutral-500">
           <KeyRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Забыли пароль? Напишите администрации листа — пароль сбросят вручную.
+          Forgot your password? Contact the staff.
         </p>
       </form>
     </AuthCard>
@@ -95,9 +95,9 @@ export function RegisterPage() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     setErr("");
-    if (!USERNAME_RE.test(username)) return setErr("Ник: 3–20 символов, только латиница, цифры и _");
-    if (password.length < 8) return setErr("Пароль должен быть не короче 8 символов");
-    if (password !== password2) return setErr("Пароли не совпадают");
+    if (!USERNAME_RE.test(username)) return setErr("Nickname: 3–20 characters, letters, digits and _ only");
+    if (password.length < 8) return setErr("Password must be at least 8 characters");
+    if (password !== password2) return setErr("Passwords don't match");
     setBusy(true);
     try {
       await signUp(username, password, captcha);
@@ -110,27 +110,26 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthCard title="Регистрация" icon={<UserPlus className="h-5 w-5" />}>
+    <AuthCard title="Sign up" icon={<UserPlus className="h-5 w-5" />}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div>
-          <label className="label">Ник</label>
+          <label className="label">Nickname</label>
           <input className="input" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={20} required />
-          <p className="mt-1 text-xs text-neutral-500">Используйте свой игровой ник — он будет отображаться в списке.</p>
         </div>
         <div>
-          <label className="label">Пароль</label>
+          <label className="label">Password</label>
           <input className="input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} maxLength={72} required />
         </div>
         <div>
-          <label className="label">Повторите пароль</label>
+          <label className="label">Repeat password</label>
           <input className="input" type="password" autoComplete="new-password" value={password2} onChange={(e) => setPassword2(e.target.value)} maxLength={72} required />
         </div>
         <Captcha onToken={setCaptcha} />
         {err && <p className="text-sm text-red-300">{err}</p>}
-        <button className="btn-primary" disabled={busy}>{busy ? "Создание…" : "Создать аккаунт"}</button>
+        <button className="btn-primary" disabled={busy}>{busy ? "Creating…" : "Create account"}</button>
         <p className="text-center text-sm text-muted">
-          Уже есть аккаунт?{" "}
-          <Link to="/login" className="text-white hover:underline">Войти</Link>
+          Already have an account?{" "}
+          <Link to="/login" className="text-white hover:underline">Log in</Link>
         </p>
       </form>
     </AuthCard>

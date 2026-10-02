@@ -27,7 +27,7 @@ export default function RecordsTab() {
 
   if (loading) return <Spinner />;
   if (error) return <ErrorBox message={error} />;
-  if (!data?.length) return <Empty icon={<Inbox />}>Нет заявок на проверке</Empty>;
+  if (!data?.length) return <Empty icon={<Inbox />}>No pending records</Empty>;
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -45,7 +45,7 @@ function PendingCard({ r, onDone }: { r: Pending; onDone: () => void }) {
 
   async function review(approve: boolean) {
     setErr("");
-    if (!approve && !note.trim()) return setErr("Укажите причину отказа");
+    if (!approve && !note.trim()) return setErr("Enter a reason for rejecting");
     setBusy(true);
     const { error } = await supabase.rpc("review_record", { p_record_id: r.id, p_approve: approve, p_note: note.trim() || null });
     setBusy(false);
@@ -76,17 +76,17 @@ function PendingCard({ r, onDone }: { r: Pending; onDone: () => void }) {
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           className="input flex-1"
-          placeholder="Заметка (необязательна при принятии, обязательна при отказе)"
+          placeholder="Note (optional when accepting, required when rejecting)"
           value={note}
           maxLength={300}
           onChange={(e) => setNote(e.target.value)}
         />
         <div className="flex gap-2">
           <button className="btn-ghost flex-1 !text-emerald-400 sm:flex-none" disabled={busy} onClick={() => review(true)}>
-            <Check className="h-4 w-4" /> Принять
+            <Check className="h-4 w-4" /> Accept
           </button>
           <button className="btn-danger flex-1 sm:flex-none" disabled={busy} onClick={() => review(false)}>
-            <X className="h-4 w-4" /> Отклонить
+            <X className="h-4 w-4" /> Reject
           </button>
         </div>
       </div>

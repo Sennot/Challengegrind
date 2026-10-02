@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, LogIn, LogOut, Menu, Settings, User, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { supabaseConfigured } from "../lib/supabase";
-import { SITE } from "../config/site";
 import { NAV_ADMIN, NAV_INFO, NAV_MAIN, type NavItem } from "./nav";
 import { Flag } from "./ui";
 
@@ -52,9 +51,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   );
   return (
     <nav className="flex flex-col gap-6">
-      {group("Лист", NAV_MAIN)}
-      {group("Информация", NAV_INFO)}
-      {rank >= (NAV_ADMIN.minRank ?? 0) && group("Управление", [NAV_ADMIN])}
+      {group("List", NAV_MAIN)}
+      {group("Info", NAV_INFO)}
+      {rank >= (NAV_ADMIN.minRank ?? 0) && group("Manage", [NAV_ADMIN])}
     </nav>
   );
 }
@@ -73,7 +72,7 @@ function UserMenu() {
   if (!session || !profile) {
     return (
       <Link to="/login" className="btn-primary !px-3 !py-1.5">
-        <LogIn className="h-4 w-4" /> Войти
+        <LogIn className="h-4 w-4" /> Log in
       </Link>
     );
   }
@@ -96,10 +95,10 @@ function UserMenu() {
             className="card absolute right-0 mt-1.5 w-48 p-1 shadow-lg shadow-black/40"
           >
             <Link onClick={() => setOpen(false)} to={`/player/${profile.username}`} className={item}>
-              <User className="h-4 w-4 text-muted" /> Профиль
+              <User className="h-4 w-4 text-muted" /> Profile
             </Link>
             <Link onClick={() => setOpen(false)} to="/settings" className={item}>
-              <Settings className="h-4 w-4 text-muted" /> Настройки
+              <Settings className="h-4 w-4 text-muted" /> Settings
             </Link>
             <button
               onClick={() => {
@@ -108,7 +107,7 @@ function UserMenu() {
               }}
               className={`${item} text-red-400`}
             >
-              <LogOut className="h-4 w-4" /> Выйти
+              <LogOut className="h-4 w-4" /> Log out
             </button>
           </motion.div>
         )}
@@ -133,7 +132,7 @@ export default function Layout() {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4">
-          <button onClick={() => setDrawer(true)} className="-ml-1.5 grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-white lg:hidden" aria-label="Открыть меню">
+          <button onClick={() => setDrawer(true)} className="-ml-1.5 grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-white lg:hidden" aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </button>
           <Logo />
@@ -162,7 +161,7 @@ export default function Layout() {
             >
               <div className="flex items-center justify-between">
                 <Logo />
-                <button onClick={() => setDrawer(false)} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-white" aria-label="Закрыть меню">
+                <button onClick={() => setDrawer(false)} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-white" aria-label="Close menu">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -177,13 +176,12 @@ export default function Layout() {
       <div className="mx-auto flex max-w-[1280px] gap-8 px-4">
         <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto py-6 lg:block">
           <SidebarContent />
-          <p className="mt-8 px-3 text-xs leading-relaxed text-neutral-600">{SITE.tagline}</p>
         </aside>
 
         <main className="min-w-0 flex-1 py-6 pb-16">
           {!supabaseConfigured && (
             <div className="mb-6 rounded-lg border border-brand/30 p-3.5 text-sm text-brand-2">
-              Supabase не настроен: создайте файл <code>.env</code> по образцу <code>.env.example</code> и перезапустите dev-сервер.
+              Supabase is not configured: create <code>.env</code> from <code>.env.example</code> and restart the dev server.
             </div>
           )}
           <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>

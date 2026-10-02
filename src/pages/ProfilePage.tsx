@@ -13,9 +13,9 @@ import { Empty, ErrorBox, Flag, RoleBadge, SocialLinks, Spinner, VideoLink } fro
 type RecordWithLevel = RecordRow & { level: Pick<Level, "id" | "name" | "position"> };
 
 const STATUS: Record<RecordStatus, { label: string; cls: string; icon: typeof Clock }> = {
-  pending: { label: "На проверке", cls: "text-amber-400", icon: Clock },
-  approved: { label: "Принят", cls: "text-emerald-400", icon: CheckCircle2 },
-  rejected: { label: "Отклонён", cls: "text-red-400", icon: XCircle },
+  pending: { label: "Pending", cls: "text-amber-400", icon: Clock },
+  approved: { label: "Accepted", cls: "text-emerald-400", icon: CheckCircle2 },
+  rejected: { label: "Rejected", cls: "text-red-400", icon: XCircle },
 };
 
 export default function ProfilePage() {
@@ -52,7 +52,7 @@ export default function ProfilePage() {
 
   if (loading) return <Spinner />;
   if (error) return <ErrorBox message={error} />;
-  if (!data) return <Empty>Игрок не найден</Empty>;
+  if (!data) return <Empty>Player not found</Empty>;
   if (data.guest) return <GuestProfile row={data.guest} verified={data.verified} />;
 
   const { profile, stats, records, verified } = data;
@@ -62,7 +62,7 @@ export default function ProfilePage() {
   const hardest = [...approved.map((r) => r.level), ...verified].sort((a, b) => a.position - b.position)[0];
 
   async function withdraw(id: number) {
-    if (!confirm("Отозвать заявку?")) return;
+    if (!confirm("Withdraw this submission?")) return;
     const { error } = await supabase.from("records").delete().eq("id", id);
     if (error) alert(errorText(error));
     void reload();
@@ -80,14 +80,14 @@ export default function ProfilePage() {
               <RoleBadge role={profile.role} />
             </div>
             <p className="mt-1 text-sm text-muted">
-              {profile.country ? countryName(profile.country) : "Страна не указана"} · с {formatDate(profile.created_at)}
+              {profile.country ? countryName(profile.country) : "No country set"} · joined {formatDate(profile.created_at)}
             </p>
             {profile.bio && <p className="mt-3 whitespace-pre-line text-sm text-neutral-300">{profile.bio}</p>}
           </div>
           <div className="flex items-center gap-1">
             <SocialLinks s={profile} />
             {isMe && (
-              <Link to="/settings" className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-white" title="Настройки">
+              <Link to="/settings" className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-white" title="Settings">
                 <Settings className="h-4 w-4" />
               </Link>
             )}
@@ -97,21 +97,21 @@ export default function ProfilePage() {
         {profile.banned && (
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-500/25 p-3 text-sm text-red-300">
             <Ban className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>Аккаунт заблокирован{profile.ban_reason ? `: ${profile.ban_reason}` : ""}</span>
+            <span>Account banned{profile.ban_reason ? `: ${profile.ban_reason}` : ""}</span>
           </div>
         )}
 
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <Stat label="Место" value={stats ? `#${stats.rank}` : "—"} />
-          <Stat label="Очки" value={stats ? formatPoints(stats.points) : "0"} />
-          <Stat label="Пройдено" value={String(approved.length)} />
-          <Stat label="Верификации" value={String(verified.length)} />
+          <Stat label="Rank" value={stats ? `#${stats.rank}` : "—"} />
+          <Stat label="Points" value={stats ? formatPoints(stats.points) : "0"} />
+          <Stat label="Completed" value={String(approved.length)} />
+          <Stat label="Verifications" value={String(verified.length)} />
         </div>
 
         {hardest && (
           <Link to={`/level/${hardest.id}`} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
             <div>
-              <div className="text-xs text-muted">Сложнейший уровень</div>
+              <div className="text-xs text-muted">Hardest level</div>
               <div className="mt-0.5 font-medium text-white">
                 <span className="text-brand">#{hardest.position}</span> {hardest.name}
               </div>
@@ -127,7 +127,7 @@ export default function ProfilePage() {
       {/* Records */}
       <section className="card">
         <h2 className="flex items-center justify-between border-b border-line px-4 py-3 text-sm font-medium text-muted">
-          <span>{isMe ? "Мои рекорды и заявки" : "Рекорды"}</span>
+          <span>{isMe ? "My records & submissions" : "Records"}</span>
           <span className="tabular-nums">{visible.length}</span>
         </h2>
         {visible.length === 0 ? (
@@ -135,13 +135,13 @@ export default function ProfilePage() {
             <ListChecks className="h-6 w-6" />
             {isMe ? (
               <>
-                Вы ещё не отправляли рекорды.
+                You haven't submitted any records yet.
                 <Link to="/submit" className="btn-primary mt-2 !py-1.5">
-                  Отправить рекорд
+                  Submit a record
                 </Link>
               </>
             ) : (
-              "Пока нет подтверждённых рекордов"
+              "No accepted records yet"
             )}
           </div>
         ) : (
@@ -163,11 +163,11 @@ export default function ProfilePage() {
                     <VideoLink url={r.video_url} />
                   </div>
                   {isMe && r.review_note && (
-                    <p className={`mt-1 text-xs ${r.status === "rejected" ? "text-red-300" : "text-muted"}`}>Заметка модератора: {r.review_note}</p>
+                    <p className={`mt-1 text-xs ${r.status === "rejected" ? "text-red-300" : "text-muted"}`}>Staff note: {r.review_note}</p>
                   )}
                   {isMe && r.status === "pending" && (
                     <button onClick={() => withdraw(r.id)} className="mt-1 text-xs text-muted hover:text-red-400">
-                      Отозвать заявку
+                      Withdraw
                     </button>
                   )}
                 </div>
@@ -183,7 +183,7 @@ export default function ProfilePage() {
 function VerifiedList({ levels }: { levels: Pick<Level, "id" | "name" | "position">[] }) {
   return (
     <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-muted">Верификации</h2>
+      <h2 className="mb-3 text-sm font-medium text-muted">Verifications</h2>
       <div className="flex flex-wrap gap-1.5">
         {levels.map((l) => (
           <Link key={l.id} to={`/level/${l.id}`} className="rounded-md border border-line px-2.5 py-1 text-sm text-neutral-200 transition-colors hover:border-neutral-600 hover:text-white">
@@ -204,19 +204,18 @@ function GuestProfile({ row, verified }: { row: LeaderboardRow; verified: Pick<L
           <Flag code={null} className="text-5xl" />
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-2xl font-semibold tracking-tight text-white">{row.username}</h1>
-            <p className="mt-1 text-sm text-muted">Без аккаунта · очки перейдут на аккаунт после регистрации с этим ником</p>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <Stat label="Место" value={`#${row.rank}`} />
-          <Stat label="Очки" value={formatPoints(row.points)} />
-          <Stat label="Пройдено" value="0" />
-          <Stat label="Верификации" value={String(row.verifications)} />
+          <Stat label="Rank" value={`#${row.rank}`} />
+          <Stat label="Points" value={formatPoints(row.points)} />
+          <Stat label="Completed" value="0" />
+          <Stat label="Verifications" value={String(row.verifications)} />
         </div>
         {hardest && (
           <Link to={`/level/${hardest.id}`} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
             <div>
-              <div className="text-xs text-muted">Сложнейший уровень</div>
+              <div className="text-xs text-muted">Hardest level</div>
               <div className="mt-0.5 font-medium text-white">
                 <span className="text-brand">#{hardest.position}</span> {hardest.name}
               </div>

@@ -38,14 +38,14 @@ export default function LevelPage() {
 
   if (loading) return <Spinner />;
   if (error) return <ErrorBox message={error} />;
-  if (!data) return <Empty>Уровень не найден</Empty>;
+  if (!data) return <Empty>Level not found</Empty>;
 
   const { level, victors } = data;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <Link to="/" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-white">
-        <ArrowLeft className="h-4 w-4" /> К списку
+        <ArrowLeft className="h-4 w-4" /> Back to list
       </Link>
 
       <div>
@@ -54,7 +54,7 @@ export default function LevelPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{level.name}</h1>
         </div>
         <p className="mt-1 text-sm text-muted">
-          by <span className="text-neutral-200">{level.creator}</span> · верифер{" "}
+          by <span className="text-neutral-200">{level.creator}</span> · verified by{" "}
           {level.verifier_profile ? (
             <Link to={`/player/${level.verifier_profile.username}`} className="text-neutral-200 hover:text-brand">
               {level.verifier}
@@ -70,9 +70,9 @@ export default function LevelPage() {
       <VideoEmbed url={level.video_url} title={level.name} />
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <Stat label="Очки" value={formatPoints(levelPoints(level.position))} />
-        <Stat label="Позиция" value={`#${level.position}`} />
-        <Stat label="Прошли" value={String(victors.length)} />
+        <Stat label="Points" value={formatPoints(levelPoints(level.position))} />
+        <Stat label="Position" value={`#${level.position}`} />
+        <Stat label="Victors" value={String(victors.length)} />
         <div className="card p-3">
           <div className="text-xs text-muted">Level ID</div>
           {level.gd_id ? (
@@ -83,7 +83,7 @@ export default function LevelPage() {
                 setTimeout(() => setCopied(false), 1500);
               }}
               className="mt-0.5 flex items-center gap-1.5 font-semibold tabular-nums text-white hover:text-brand"
-              title="Скопировать"
+              title="Copy"
             >
               {level.gd_id}
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5 text-muted" />}
@@ -95,9 +95,9 @@ export default function LevelPage() {
       </div>
 
       <section>
-        <h2 className="mb-2.5 text-sm font-medium text-muted">Рекорды · {victors.length}</h2>
+        <h2 className="mb-2.5 text-sm font-medium text-muted">Records · {victors.length}</h2>
         {victors.length === 0 ? (
-          <Empty icon={<Users />}>Пока никто не прошёл этот уровень</Empty>
+          <Empty icon={<Users />}>No one has beaten this level yet</Empty>
         ) : (
           <div className="card divide-y divide-line">
             {victors.map((v) => (

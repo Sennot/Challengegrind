@@ -10,9 +10,9 @@ type Draft = { name: string; creator: string; verifier: string; gd_id: string; v
 const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "" };
 
 function validate(d: Draft): string | null {
-  if (!d.name.trim() || !d.creator.trim() || !d.verifier.trim()) return "Заполните название, автора и верифера";
-  if (d.gd_id && !/^\d+$/.test(d.gd_id)) return "Level ID — только цифры";
-  if (d.video_url && !isHttpsUrl(d.video_url)) return "Видео должно быть ссылкой https://";
+  if (!d.name.trim() || !d.creator.trim() || !d.verifier.trim()) return "Fill in name, creator and verifier";
+  if (d.gd_id && !/^\d+$/.test(d.gd_id)) return "Level ID must be digits only";
+  if (d.video_url && !isHttpsUrl(d.video_url)) return "Video must be an https:// link";
   return null;
 }
 
@@ -25,11 +25,11 @@ function DraftFields({ d, set }: { d: Draft; set: (d: Draft) => void }) {
   );
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {f("name", "Название")}
-      {f("creator", "Автор(ы)")}
-      {f("verifier", "Верифер")}
-      {f("gd_id", "Level ID", "необязательно")}
-      <div className="sm:col-span-2">{f("video_url", "Видео верификации", "https://youtu.be/…")}</div>
+      {f("name", "Name")}
+      {f("creator", "Creator(s)")}
+      {f("verifier", "Verifier")}
+      {f("gd_id", "Level ID", "optional")}
+      <div className="sm:col-span-2">{f("video_url", "Verification video", "https://youtu.be/…")}</div>
     </div>
   );
 }
@@ -57,14 +57,14 @@ export default function LevelsTab() {
       p_position: position,
     });
     if (error) return setMsg(errorText(error));
-    setMsg(`«${draft.name}» добавлен на #${position}`);
+    setMsg(`"${draft.name}" added at #${position}`);
     setDraft(EMPTY);
     setPos("");
     void reload();
   }
 
   async function move(l: Level) {
-    const input = prompt(`Новая позиция для «${l.name}» (1–${total}):`, String(l.position));
+    const input = prompt(`New position for "${l.name}" (1–${total}):`, String(l.position));
     if (!input) return;
     const { error } = await supabase.rpc("move_level", { p_level_id: l.id, p_new_position: Number(input) });
     if (error) alert(errorText(error));
@@ -72,7 +72,7 @@ export default function LevelsTab() {
   }
 
   async function remove(l: Level) {
-    if (!confirm(`Удалить «${l.name}» с #${l.position}? Все рекорды на этом уровне тоже будут удалены.`)) return;
+    if (!confirm(`Remove "${l.name}" from #${l.position}? All records on this level will be deleted too.`)) return;
     const { error } = await supabase.rpc("remove_level", { p_level_id: l.id });
     if (error) alert(errorText(error));
     void reload();
@@ -100,16 +100,16 @@ export default function LevelsTab() {
     <div className="flex flex-col gap-6">
       <form onSubmit={add} className="card flex flex-col gap-4 p-5">
         <h2 className="flex items-center gap-2 font-bold">
-          <Plus className="h-4 w-4 text-brand" /> Добавить уровень
+          <Plus className="h-4 w-4 text-brand" /> Add level
         </h2>
         <DraftFields d={draft} set={setDraft} />
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-40">
-            <label className="label">Позиция</label>
+            <label className="label">Position</label>
             <input className="input" type="number" min={1} max={total + 1} placeholder={String(total + 1)} value={pos} onChange={(e) => setPos(e.target.value)} />
           </div>
           <button className="btn-primary">
-            <Plus className="h-4 w-4" /> Добавить
+            <Plus className="h-4 w-4" /> Add
           </button>
         </div>
         {msg && <p className="text-sm text-brand-2">{msg}</p>}
@@ -127,10 +127,10 @@ export default function LevelsTab() {
                 <DraftFields d={editDraft} set={setEditDraft} />
                 <div className="flex gap-2">
                   <button className="btn-primary" onClick={() => saveEdit(l.id)}>
-                    <Save className="h-4 w-4" /> Сохранить
+                    <Save className="h-4 w-4" /> Save
                   </button>
                   <button className="btn-ghost" onClick={() => setEditing(null)}>
-                    <X className="h-4 w-4" /> Отмена
+                    <X className="h-4 w-4" /> Cancel
                   </button>
                 </div>
               </div>
@@ -140,16 +140,16 @@ export default function LevelsTab() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold">{l.name}</div>
                   <div className="truncate text-xs text-muted">
-                    {l.creator} · верифер {l.verifier}
+                    {l.creator} · verifier {l.verifier}
                   </div>
                 </div>
                 <div className="flex gap-1.5">
-                  <button className="btn-ghost !p-2" title="Переместить" onClick={() => move(l)}>
+                  <button className="btn-ghost !p-2" title="Move" onClick={() => move(l)}>
                     <ArrowUpDown className="h-4 w-4" />
                   </button>
                   <button
                     className="btn-ghost !p-2"
-                    title="Изменить"
+                    title="Edit"
                     onClick={() => {
                       setEditing(l.id);
                       setEditDraft({ name: l.name, creator: l.creator, verifier: l.verifier, gd_id: l.gd_id ? String(l.gd_id) : "", video_url: l.video_url ?? "" });
@@ -157,7 +157,7 @@ export default function LevelsTab() {
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button className="btn-danger !p-2" title="Удалить" onClick={() => remove(l)}>
+                  <button className="btn-danger !p-2" title="Remove" onClick={() => remove(l)}>
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>

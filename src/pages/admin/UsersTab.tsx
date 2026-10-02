@@ -41,12 +41,12 @@ export default function UsersTab() {
 
       <section>
         <h2 className="mb-2 flex items-center gap-2 text-sm font-medium text-muted">
-          <ShieldCheck className="h-4 w-4" /> Стафф листа
+          <ShieldCheck className="h-4 w-4" /> List staff
         </h2>
         {staff.loading ? (
           <Spinner className="!py-8" />
         ) : !staff.data?.length ? (
-          <Empty>Стаффа пока нет — найдите игрока ниже и выдайте роль</Empty>
+          <Empty>No staff yet — find a player below and give them a role</Empty>
         ) : (
           <div className="card divide-y divide-line">
             {staff.data.map((u) => (
@@ -58,15 +58,15 @@ export default function UsersTab() {
 
       <section>
         <h2 className="mb-2 flex items-center gap-2 text-sm font-medium text-muted">
-          <Search className="h-4 w-4" /> Поиск игроков
+          <Search className="h-4 w-4" /> Find players
         </h2>
         <form onSubmit={search} className="mb-2.5 flex gap-2">
-          <input className="input flex-1" placeholder="Ник игрока" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button className="btn-primary">Найти</button>
+          <input className="input flex-1" placeholder="Nickname" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button className="btn-primary">Search</button>
         </form>
         {found &&
           (found.length === 0 ? (
-            <Empty>Никого не найдено</Empty>
+            <Empty>No one found</Empty>
           ) : (
             <div className="card divide-y divide-line">
               {found.map((u) => (
@@ -84,29 +84,29 @@ function UserRow({ u, onChange, report }: { u: Profile; onChange: () => void; re
   const manageable = u.id !== me?.id && ROLE_RANK[u.role] < rank;
 
   async function setRole(role: Role) {
-    if (!confirm(`Выдать ${u.username} роль «${ROLE_LABEL[role]}»?`)) return;
+    if (!confirm(`Give ${u.username} the role "${ROLE_LABEL[role]}"?`)) return;
     const { error } = await supabase.rpc("set_user_role", { p_user_id: u.id, p_role: role });
-    report(`${u.username}: роль — ${ROLE_LABEL[role]}`, error);
+    report(`${u.username}: role set to ${ROLE_LABEL[role]}`, error);
     onChange();
   }
 
   async function toggleBan() {
     let reason: string | null = null;
     if (!u.banned) {
-      reason = prompt(`Причина блокировки ${u.username}:`);
+      reason = prompt(`Reason for banning ${u.username}:`);
       if (reason === null) return;
-    } else if (!confirm(`Разблокировать ${u.username}?`)) return;
+    } else if (!confirm(`Unban ${u.username}?`)) return;
     const { error } = await supabase.rpc("set_user_ban", { p_user_id: u.id, p_banned: !u.banned, p_reason: reason });
-    report(u.banned ? `${u.username} разблокирован` : `${u.username} заблокирован`, error);
+    report(u.banned ? `${u.username} unbanned` : `${u.username} banned`, error);
     onChange();
   }
 
   async function resetPassword() {
-    const password = prompt(`Новый пароль для ${u.username} (минимум 8 символов):`);
+    const password = prompt(`New password for ${u.username} (at least 8 characters):`);
     if (!password) return;
-    if (password.length < 8) return alert("Минимум 8 символов");
+    if (password.length < 8) return alert("At least 8 characters");
     const { error } = await supabase.functions.invoke("admin-reset-password", { body: { userId: u.id, password } });
-    report(`Пароль ${u.username} изменён. Передайте его владельцу аккаунта.`, error);
+    report(`Password for ${u.username} changed. Send it to the account owner.`, error);
   }
 
   return (
@@ -117,7 +117,7 @@ function UserRow({ u, onChange, report }: { u: Profile; onChange: () => void; re
           {u.username}
         </Link>
         <RoleBadge role={u.role} />
-        {u.banned && <span className="rounded-md border border-red-500/25 px-2 py-0.5 text-[11px] text-red-400">Бан</span>}
+        {u.banned && <span className="rounded-md border border-red-500/25 px-2 py-0.5 text-[11px] text-red-400">Banned</span>}
       </div>
       {manageable ? (
         <div className="flex gap-1.5">
@@ -128,15 +128,15 @@ function UserRow({ u, onChange, report }: { u: Profile; onChange: () => void; re
               </option>
             ))}
           </select>
-          <button className="btn-ghost !px-2.5" title="Сбросить пароль" onClick={resetPassword}>
+          <button className="btn-ghost !px-2.5" title="Reset password" onClick={resetPassword}>
             <KeyRound className="h-4 w-4" />
           </button>
-          <button className={u.banned ? "btn-ghost !px-2.5" : "btn-danger !px-2.5"} title={u.banned ? "Разблокировать" : "Заблокировать"} onClick={toggleBan}>
+          <button className={u.banned ? "btn-ghost !px-2.5" : "btn-danger !px-2.5"} title={u.banned ? "Unban" : "Ban"} onClick={toggleBan}>
             <Ban className="h-4 w-4" />
           </button>
         </div>
       ) : (
-        <span className="text-xs text-muted">{u.id === me?.id ? "Это вы" : "Нет прав"}</span>
+        <span className="text-xs text-muted">{u.id === me?.id ? "You" : "No access"}</span>
       )}
     </div>
   );

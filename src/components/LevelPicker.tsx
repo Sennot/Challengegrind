@@ -82,7 +82,7 @@ export default function LevelPicker({ levels, value, onChange }: { levels: PickL
           <input
             ref={input}
             className="input pl-9 pr-9"
-            placeholder="Название, автор или #позиция"
+            placeholder="Name, creator or #position"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
@@ -100,7 +100,7 @@ export default function LevelPicker({ levels, value, onChange }: { levels: PickL
       {open && (
         <div ref={listRef} className="card absolute z-30 mt-1 max-h-72 w-full overflow-y-auto p-1 shadow-lg shadow-black/40" role="listbox">
           {filtered.length === 0 ? (
-            <div className="px-3 py-4 text-center text-sm text-muted">Ничего не найдено</div>
+            <div className="px-3 py-4 text-center text-sm text-muted">Nothing found</div>
           ) : (
             filtered.map((l, i) => (
               <button

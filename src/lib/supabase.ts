@@ -14,8 +14,8 @@ export const usernameToEmail = (username: string) => `${username.trim().toLowerC
 export const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
 
 export function errorText(e: unknown): string {
-  if (!e) return "Неизвестная ошибка";
+  if (!e) return "Unknown error";
   if (typeof e === "string") return e;
   if (typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return "Неизвестная ошибка";
+  return "Unknown error";
 }

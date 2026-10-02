@@ -8,16 +8,16 @@ export interface NavItem {
 }
 
 export const NAV_MAIN: NavItem[] = [
-  { to: "/", label: "Список", icon: ListOrdered },
+  { to: "/", label: "List", icon: ListOrdered },
   { to: "/stats", label: "Stats Viewer", icon: Trophy },
   { to: "/changelog", label: "Changelog", icon: History },
-  { to: "/submit", label: "Отправить рекорд", icon: Send },
+  { to: "/submit", label: "Submit record", icon: Send },
 ];
 
 export const NAV_INFO: NavItem[] = [
-  { to: "/rules", label: "Правила", icon: ScrollText },
-  { to: "/team", label: "Команда", icon: Users },
-  { to: "/socials", label: "Соцсети", icon: Link2 },
+  { to: "/rules", label: "Rules", icon: ScrollText },
+  { to: "/team", label: "Team", icon: Users },
+  { to: "/socials", label: "Socials", icon: Link2 },
 ];
 
-export const NAV_ADMIN: NavItem = { to: "/admin", label: "Админ-панель", icon: Shield, minRank: 1 };
+export const NAV_ADMIN: NavItem = { to: "/admin", label: "Admin panel", icon: Shield, minRank: 1 };

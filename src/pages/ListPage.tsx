@@ -33,12 +33,12 @@ export default function ListPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
-        title="Список челленджей"
-        subtitle={data ? `${data.length} уровней` : undefined}
+        title="Challenge list"
+        subtitle={data ? `${data.length} levels` : undefined}
         right={
           <div className="relative w-full sm:w-64">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input className="input pl-9" placeholder="Поиск" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className="input pl-9" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         }
       />
@@ -48,7 +48,7 @@ export default function ListPage() {
       ) : error ? (
         <ErrorBox message={error} />
       ) : levels.length === 0 ? (
-        <Empty icon={<ListOrdered />}>{q ? "Ничего не найдено" : "Список пока пуст"}</Empty>
+        <Empty icon={<ListOrdered />}>{q ? "Nothing found" : "The list is empty"}</Empty>
       ) : (
         <div className="flex flex-col gap-2.5">
           {levels.map((l) => (
@@ -84,12 +84,12 @@ function LevelCard({ level }: { level: Level }) {
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-semibold text-white sm:text-lg">{level.name}</h3>
           <p className="truncate text-sm text-neutral-400">
-            {level.creator} <span className="text-neutral-600">·</span> верифер {level.verifier}
+            {level.creator} <span className="text-neutral-600">·</span> verified by {level.verifier}
           </p>
         </div>
         <div className="shrink-0 text-right">
           <div className="font-semibold tabular-nums text-white">{formatPoints(levelPoints(level.position))}</div>
-          <div className="text-xs text-neutral-500">очков</div>
+          <div className="text-xs text-neutral-500">points</div>
         </div>
       </div>
     </Link>

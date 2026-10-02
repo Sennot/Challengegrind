@@ -12,7 +12,7 @@ export function RulesPage() {
   const { data, loading, error } = useAsync(fetchRules, []);
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Правила" subtitle="Прочитайте перед отправкой рекорда" />
+      <PageHeader title="Rules" />
       {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : null}
       <div className="flex flex-col gap-3">
         {data?.map((section, i) => (
@@ -46,13 +46,13 @@ export function TeamPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Команда листа" />
+      <PageHeader title="List team" />
       {loading ? (
         <Spinner />
       ) : error ? (
         <ErrorBox message={error} />
       ) : !data?.length ? (
-        <Empty>Команда пока не назначена</Empty>
+        <Empty>No team members yet</Empty>
       ) : (
         <div className="flex flex-col gap-5">
           {TEAM_ORDER.map((role) => {
@@ -84,7 +84,7 @@ export function TeamPage() {
 export function SocialsPage() {
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Соцсети" subtitle="Новости и обновления листа" />
+      <PageHeader title="Socials" />
       <div className="flex flex-col gap-2.5">
         {SOCIALS.map((s) => (
           <a
@@ -113,9 +113,9 @@ export function NotFoundPage() {
   return (
     <div className="flex flex-col items-center gap-3 py-24 text-center">
       <div className="text-5xl font-semibold text-white">404</div>
-      <p className="text-sm text-muted">Страница не найдена</p>
+      <p className="text-sm text-muted">Page not found</p>
       <Link to="/" className="btn-ghost mt-2">
-        На главную
+        Back to list
       </Link>
     </div>
   );

@@ -9,10 +9,10 @@ import UsersTab from "./UsersTab";
 import RulesTab from "./RulesTab";
 
 const TABS = [
-  { id: "records", label: "Рекорды", icon: ClipboardCheck, minRank: 1 },
-  { id: "levels", label: "Уровни", icon: ListOrdered, minRank: 2 },
-  { id: "users", label: "Игроки и стафф", icon: Users, minRank: 3 },
-  { id: "rules", label: "Правила", icon: ScrollText, minRank: 3 },
+  { id: "records", label: "Records", icon: ClipboardCheck, minRank: 1 },
+  { id: "levels", label: "Levels", icon: ListOrdered, minRank: 2 },
+  { id: "users", label: "Players & staff", icon: Users, minRank: 3 },
+  { id: "rules", label: "Rules", icon: ScrollText, minRank: 3 },
 ] as const;
 
 export default function AdminPage() {
@@ -25,7 +25,7 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title="Админ-панель" />
+      <PageHeader title="Admin panel" />
       <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line">
         {available.map((t) => {
           const Icon = t.icon;

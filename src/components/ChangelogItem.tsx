@@ -14,16 +14,16 @@ function Lvl({ id, name }: { id?: number | null; name: string }) {
   );
 }
 
-/** "выше Y и ниже Z" / "выше Y" / "ниже Z" */
+/** "above Y and below Z" / "above Y" / "below Z" */
 function Neighbours({ e }: { e: ChangelogEntry }) {
   const parts: ReactNode[] = [];
-  if (e.next_name) parts.push(<>выше <span className="text-neutral-300">{e.next_name}</span></>);
-  if (e.prev_name) parts.push(<>ниже <span className="text-neutral-300">{e.prev_name}</span></>);
+  if (e.next_name) parts.push(<>above <span className="text-neutral-300">{e.next_name}</span></>);
+  if (e.prev_name) parts.push(<>below <span className="text-neutral-300">{e.prev_name}</span></>);
   if (!parts.length) return null;
   return (
     <>
       , {parts[0]}
-      {parts[1] && <> и {parts[1]}</>}
+      {parts[1] && <> and {parts[1]}</>}
     </>
   );
 }
@@ -35,7 +35,7 @@ function describe(e: ChangelogEntry) {
       tone: "text-emerald-400",
       text: (
         <>
-          <Lvl id={e.level_id} name={e.level_name} /> добавлен на <span className="text-white">#{e.new_position}</span>
+          <Lvl id={e.level_id} name={e.level_name} /> added at <span className="text-white">#{e.new_position}</span>
           <Neighbours e={e} />
         </>
       ),
@@ -48,7 +48,7 @@ function describe(e: ChangelogEntry) {
       tone: up ? "text-sky-400" : "text-amber-400",
       text: (
         <>
-          <Lvl id={e.level_id} name={e.level_name} /> {up ? "поднят" : "опущен"} с #{e.old_position} на{" "}
+          <Lvl id={e.level_id} name={e.level_name} /> {up ? "raised" : "lowered"} from #{e.old_position} to{" "}
           <span className="text-white">#{e.new_position}</span>
           <Neighbours e={e} />
         </>
@@ -60,7 +60,7 @@ function describe(e: ChangelogEntry) {
     tone: "text-red-400",
     text: (
       <>
-        <Lvl name={e.level_name} /> удалён с #{e.old_position}
+        <Lvl name={e.level_name} /> removed from #{e.old_position}
       </>
     ),
   };
@@ -76,7 +76,7 @@ export default function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm leading-relaxed text-muted">{d.text}</p>
-        <p className="mt-0.5 text-xs text-neutral-600" title={new Date(entry.created_at).toLocaleString("ru-RU")}>
+        <p className="mt-0.5 text-xs text-neutral-600" title={new Date(entry.created_at).toLocaleString("en-US")}>
           {timeAgo(entry.created_at)}
         </p>
       </div>

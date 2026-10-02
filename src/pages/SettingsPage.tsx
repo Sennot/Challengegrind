@@ -9,10 +9,10 @@ import { BrandIcon, ErrorBox, Flag, PageHeader, Spinner, type Brand } from "../c
 type SocialForm = { telegram: string; discord: string; youtube: string; twitch: string };
 
 const SOCIAL_FIELDS: { key: keyof SocialForm; brand: Brand; label: string; ph: string; re: RegExp; hint: string }[] = [
-  { key: "telegram", brand: "telegram", label: "Telegram", ph: "username (без @)", re: /^[A-Za-z0-9_]{4,32}$/, hint: "Ник Telegram: 4–32 символа, латиница, цифры, _" },
-  { key: "discord", brand: "discord", label: "Discord", ph: "username", re: /^[a-z0-9_.]{2,32}$/, hint: "Ник Discord: строчные буквы, цифры, _ и ." },
-  { key: "youtube", brand: "youtube", label: "YouTube", ph: "https://youtube.com/@канал", re: /^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\/.{1,180}$/, hint: "Ссылка на канал YouTube" },
-  { key: "twitch", brand: "twitch", label: "Twitch", ph: "username", re: /^[A-Za-z0-9_]{3,25}$/, hint: "Ник Twitch: 3–25 символов" },
+  { key: "telegram", brand: "telegram", label: "Telegram", ph: "username (without @)", re: /^[A-Za-z0-9_]{4,32}$/, hint: "Telegram username: 4–32 characters, letters, digits, _" },
+  { key: "discord", brand: "discord", label: "Discord", ph: "username", re: /^[a-z0-9_.]{2,32}$/, hint: "Discord username: lowercase letters, digits, _ and ." },
+  { key: "youtube", brand: "youtube", label: "YouTube", ph: "https://youtube.com/@channel", re: /^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\/.{1,180}$/, hint: "YouTube channel link" },
+  { key: "twitch", brand: "twitch", label: "Twitch", ph: "username", re: /^[A-Za-z0-9_]{3,25}$/, hint: "Twitch username: 3–25 characters" },
 ];
 
 export default function SettingsPage() {
@@ -39,7 +39,7 @@ export default function SettingsPage() {
 
   if (loading) return <Spinner />;
   if (!profile) return <Navigate to="/login" replace />;
-  if (profile.banned) return <ErrorBox message="Аккаунт заблокирован — редактирование профиля недоступно." />;
+  if (profile.banned) return <ErrorBox message="Your account is banned — profile editing is disabled." />;
 
   async function saveProfile(e: FormEvent) {
     e.preventDefault();
@@ -64,7 +64,7 @@ export default function SettingsPage() {
         social_twitch: clean.twitch || null,
       })
       .eq("id", profile!.id);
-    setMsg(error ? { ok: false, text: errorText(error) } : { ok: true, text: "Сохранено" });
+    setMsg(error ? { ok: false, text: errorText(error) } : { ok: true, text: "Saved" });
     if (!error) {
       setSocial(clean);
       void refreshProfile();
@@ -73,10 +73,10 @@ export default function SettingsPage() {
 
   async function changePassword(e: FormEvent) {
     e.preventDefault();
-    if (pw.length < 8) return setPwMsg("Минимум 8 символов");
-    if (pw !== pw2) return setPwMsg("Пароли не совпадают");
+    if (pw.length < 8) return setPwMsg("At least 8 characters");
+    if (pw !== pw2) return setPwMsg("Passwords don't match");
     const { error } = await supabase.auth.updateUser({ password: pw });
-    setPwMsg(error ? errorText(error) : "Пароль изменён");
+    setPwMsg(error ? errorText(error) : "Password changed");
     if (!error) {
       setPw("");
       setPw2("");
@@ -85,16 +85,16 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Настройки" subtitle={profile.username} />
+      <PageHeader title="Settings" subtitle={profile.username} />
       <div className="flex flex-col gap-4">
         <form onSubmit={saveProfile} className="card flex flex-col gap-4 p-5">
-          <h2 className="font-medium text-white">Профиль</h2>
+          <h2 className="font-medium text-white">Profile</h2>
           <div>
-            <label className="label">Страна</label>
+            <label className="label">Country</label>
             <div className="flex items-center gap-3">
               <Flag code={country || null} className="text-2xl" />
               <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
-                <option value="">Не указана (международный флаг)</option>
+                <option value="">Not set</option>
                 {COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.name}
@@ -104,13 +104,13 @@ export default function SettingsPage() {
             </div>
           </div>
           <div>
-            <label className="label">О себе</label>
+            <label className="label">About</label>
             <textarea className="input min-h-24 resize-y" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} />
             <p className="mt-1 text-right text-xs text-neutral-600">{bio.length}/300</p>
           </div>
 
           <div>
-            <label className="label">Соцсети</label>
+            <label className="label">Socials</label>
             <div className="grid gap-2.5 sm:grid-cols-2">
               {SOCIAL_FIELDS.map((f) => (
                 <div key={f.key} className="relative">
@@ -132,19 +132,19 @@ export default function SettingsPage() {
 
           {msg && <p className={`text-sm ${msg.ok ? "text-emerald-400" : "text-red-400"}`}>{msg.text}</p>}
           <button className="btn-primary self-start">
-            <Save className="h-4 w-4" /> Сохранить
+            <Save className="h-4 w-4" /> Save
           </button>
         </form>
 
         <form onSubmit={changePassword} className="card flex flex-col gap-4 p-5">
-          <h2 className="font-medium text-white">Смена пароля</h2>
+          <h2 className="font-medium text-white">Change password</h2>
           <div className="grid gap-2.5 sm:grid-cols-2">
-            <input className="input" type="password" placeholder="Новый пароль" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} maxLength={72} />
-            <input className="input" type="password" placeholder="Повторите пароль" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} maxLength={72} />
+            <input className="input" type="password" placeholder="New password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} maxLength={72} />
+            <input className="input" type="password" placeholder="Repeat password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} maxLength={72} />
           </div>
           {pwMsg && <p className="text-sm text-muted">{pwMsg}</p>}
           <button className="btn-ghost self-start">
-            <KeyRound className="h-4 w-4" /> Изменить пароль
+            <KeyRound className="h-4 w-4" /> Change password
           </button>
         </form>
       </div>

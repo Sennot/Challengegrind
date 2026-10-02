@@ -48,7 +48,7 @@ export function PageHeader({ title, subtitle, right }: { icon?: ReactNode; title
 /** Country flag; players without a country get the international (UN) flag. */
 export function Flag({ code, className = "" }: { code: string | null | undefined; className?: string }) {
   const c = code || "un";
-  return <span title={code ? countryName(code) : "Международный"} className={`fi fi-${c} shrink-0 rounded-[2px] ${className}`} />;
+  return <span title={code ? countryName(code) : "International"} className={`fi fi-${c} shrink-0 rounded-[2px] ${className}`} />;
 }
 
 export function RoleBadge({ role }: { role: Role }) {
@@ -104,7 +104,7 @@ export function SocialLinks({ s, size = "h-4 w-4" }: { s: Socials; size?: string
       <button
         key="dc"
         className={cls}
-        title={`Discord: ${s.social_discord} (нажмите, чтобы скопировать)`}
+        title={`Discord: ${s.social_discord} (click to copy)`}
         onClick={() => {
           void navigator.clipboard.writeText(s.social_discord!);
           setCopied(true);
@@ -153,7 +153,7 @@ export function VideoEmbed({ url, title }: { url: string | null; title: string }
   if (url)
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="card flex items-center justify-center gap-2 p-6 text-sm text-muted hover:text-white">
-        <ExternalLink className="h-4 w-4" /> Открыть видео
+        <ExternalLink className="h-4 w-4" /> Open video
       </a>
     );
   return null;
@@ -162,7 +162,7 @@ export function VideoEmbed({ url, title }: { url: string | null; title: string }
 export function VideoLink({ url }: { url: string }) {
   const brand: Brand | null = youtubeId(url) ? "youtube" : telegramPost(url) || url.includes("t.me/") ? "telegram" : null;
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-white" title="Видео">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-white" title="Video">
       {brand ? <BrandIcon brand={brand} /> : <ExternalLink className="h-4 w-4" />}
     </a>
   );

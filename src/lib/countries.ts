@@ -3,7 +3,7 @@ const CODES =
     " ",
   );
 
-const names = new Intl.DisplayNames(["ru"], { type: "region" });
+const names = new Intl.DisplayNames(["en"], { type: "region" });
 
 export const countryName = (code: string) => {
   try {
@@ -14,5 +14,5 @@ export const countryName = (code: string) => {
 };
 
 export const COUNTRIES = CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) =>
-  a.name.localeCompare(b.name, "ru"),
+  a.name.localeCompare(b.name, "en"),
 );

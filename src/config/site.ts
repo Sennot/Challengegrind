@@ -1,7 +1,6 @@
 // Static site content — edit freely.
 export const SITE = {
   name: "ChallengeGrind",
-  tagline: "Список сложнейших челленджей Geometry Dash",
 };
 
 export const SOCIALS: { name: string; handle: string; url: string; kind: "telegram" }[] = [
@@ -10,34 +9,33 @@ export const SOCIALS: { name: string; handle: string; url: string; kind: "telegr
 
 export const RULES: { title: string; items: string[] }[] = [
   {
-    title: "Требования к рекорду",
+    title: "Record requirements",
     items: [
-      "Принимаются только прохождения на 100%.",
-      "Видео обязательно (YouTube или Telegram): прохождение должно быть записано целиком, без склеек.",
-      "На видео должны быть слышны клики (или видны нажатия) и звук игры.",
-      "Моды, дающие преимущество (noclip, speedhack и т.п.), запрещены.",
+      "Only 100% completions are accepted.",
+      "A video is required (YouTube or Telegram), showing the whole run without cuts.",
+      "Clicks (or taps) and game audio must be audible/visible.",
+      "Mods that give an advantage (noclip, speedhack, etc.) are not allowed.",
     ],
   },
   {
     title: "Raw footage",
     items: [
-      "Raw footage при подаче не требуется.",
-      "Не удаляйте raw footage в течение 3 дней после подачи рекорда — администрация может его запросить.",
+      "Raw footage is not required when submitting.",
+      "Keep your raw footage for 3 days after submitting — staff may ask for it.",
     ],
   },
   {
-    title: "Уровни",
+    title: "Levels",
     items: [
-      "В список попадают челленджи, одобренные командой листа.",
-      "Верифер уровня получает очки за него автоматически.",
-      "Позиции определяются командой и могут меняться — все изменения видны во вкладке Changelog.",
+      "Only challenges approved by the list team are placed.",
+      "Placements are decided by the team and may change — see the Changelog.",
     ],
   },
   {
-    title: "Аккаунты",
+    title: "Accounts",
     items: [
-      "Регистрируйтесь под своим ником. Аккаунты, созданные под чужим именем, будут переданы владельцу ника.",
-      "Один аккаунт на одного игрока. За нарушения аккаунт может быть заблокирован.",
+      "Register with your own nickname. Accounts made under someone else's name will be handed to the real owner.",
+      "One account per player. Accounts may be banned for breaking the rules.",
     ],
   },
 ];

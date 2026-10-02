@@ -3,7 +3,7 @@ import type { Role } from "./types";
 export const ROLE_RANK: Record<Role, number> = { player: 0, helper: 1, moderator: 2, admin: 3, owner: 4 };
 
 export const ROLE_LABEL: Record<Role, string> = {
-  player: "Игрок",
+  player: "Player",
   helper: "List Helper",
   moderator: "List Moderator",
   admin: "List Admin",
