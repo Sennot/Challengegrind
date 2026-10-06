@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Navigate } from "react-router";
-import { ClipboardCheck, ListOrdered, ScrollText, Users } from "lucide-react";
+import { ClipboardCheck, Inbox, ListOrdered, ScrollText, Users } from "lucide-react";
 import { useAuth } from "../../lib/auth";
 import { PageHeader, Spinner } from "../../components/ui";
 import RecordsTab from "./RecordsTab";
 import LevelsTab from "./LevelsTab";
+import SubmissionsTab from "./SubmissionsTab";
 import UsersTab from "./UsersTab";
 import RulesTab from "./RulesTab";
 
 const TABS = [
   { id: "records", label: "Records", icon: ClipboardCheck, minRank: 1 },
   { id: "levels", label: "Levels", icon: ListOrdered, minRank: 2 },
+  { id: "submissions", label: "Level submissions", icon: Inbox, minRank: 2 },
   { id: "users", label: "Players & staff", icon: Users, minRank: 3 },
   { id: "rules", label: "Rules", icon: ScrollText, minRank: 3 },
 ] as const;
@@ -46,6 +48,7 @@ export default function AdminPage() {
       </div>
       {tab === "records" && <RecordsTab />}
       {tab === "levels" && rank >= 2 && <LevelsTab />}
+      {tab === "submissions" && rank >= 2 && <SubmissionsTab />}
       {tab === "users" && rank >= 3 && <UsersTab />}
       {tab === "rules" && rank >= 3 && <RulesTab />}
     </div>

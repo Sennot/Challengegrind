@@ -1,11 +1,17 @@
 import { useState, type ReactNode } from "react";
-import { AlertTriangle, Check, ExternalLink, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Clock, ExternalLink, Loader2, XCircle } from "lucide-react";
 import { siDiscord, siTelegram, siTwitch, siYoutube } from "simple-icons";
 import "flag-icons/css/flag-icons.min.css";
 import { countryName } from "../lib/countries";
 import { ROLE_LABEL, ROLE_STYLE } from "../lib/roles";
 import { telegramPost, tgEmbed, youtubeId, ytEmbed } from "../lib/video";
-import type { Role, Socials } from "../lib/types";
+import type { RecordStatus, Role, Socials } from "../lib/types";
+
+export const STATUS: Record<RecordStatus, { label: string; cls: string; icon: typeof Clock }> = {
+  pending: { label: "Pending", cls: "text-amber-400", icon: Clock },
+  approved: { label: "Accepted", cls: "text-emerald-400", icon: CheckCircle2 },
+  rejected: { label: "Rejected", cls: "text-red-400", icon: XCircle },
+};
 
 export function Spinner({ className = "" }: { className?: string }) {
   return (

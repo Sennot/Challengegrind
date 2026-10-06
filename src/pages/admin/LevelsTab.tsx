@@ -6,10 +6,10 @@ import type { Level } from "../../lib/types";
 import { isHttpsUrl } from "../../lib/video";
 import { ErrorBox, PositionBadge, Spinner } from "../../components/ui";
 
-type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string; fps: string };
-const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "", fps: "" };
+export type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string; fps: string };
+export const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "", fps: "" };
 
-function validate(d: Draft): string | null {
+export function validate(d: Draft): string | null {
   if (!d.name.trim() || !d.creator.trim() || !d.verifier.trim()) return "Fill in name, creator and verifier";
   if (d.gd_id && !/^\d+$/.test(d.gd_id)) return "Level ID must be digits only";
   if (d.video_url && !isHttpsUrl(d.video_url)) return "Video must be an https:// link";
@@ -17,7 +17,7 @@ function validate(d: Draft): string | null {
   return null;
 }
 
-function DraftFields({ d, set }: { d: Draft; set: (d: Draft) => void }) {
+export function DraftFields({ d, set }: { d: Draft; set: (d: Draft) => void }) {
   const f = (k: keyof Draft, label: string, ph = "") => (
     <div>
       <label className="label">{label}</label>

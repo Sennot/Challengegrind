@@ -7,6 +7,7 @@ import StatsPage from "./pages/StatsPage";
 import ProfilePage from "./pages/ProfilePage";
 import ChangelogPage from "./pages/ChangelogPage";
 import SubmitPage from "./pages/SubmitPage";
+import SubmitLevelPage from "./pages/SubmitLevelPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/admin/AdminPage";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="player/:username" element={<ProfilePage />} />
             <Route path="changelog" element={<ChangelogPage />} />
             <Route path="submit" element={<SubmitPage />} />
+            <Route path="submit-level" element={<SubmitLevelPage />} />
             <Route path="rules" element={<RulesPage />} />
             <Route path="team" element={<TeamPage />} />
             <Route path="socials" element={<SocialsPage />} />

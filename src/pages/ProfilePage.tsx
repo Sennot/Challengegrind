@@ -1,22 +1,16 @@
 import { Link, useParams } from "react-router";
 import { motion } from "framer-motion";
-import { Ban, CheckCircle2, Clock, ListChecks, Settings, XCircle } from "lucide-react";
+import { Ban, ListChecks, Settings } from "lucide-react";
 import { supabase, errorText } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
 import { useAuth } from "../lib/auth";
-import type { LeaderboardRow, Level, Profile, RecordRow, RecordStatus } from "../lib/types";
+import type { LeaderboardRow, Level, Profile, RecordRow } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { countryName } from "../lib/countries";
 import { formatDate, timeAgo } from "../lib/time";
-import { Empty, ErrorBox, Flag, RoleBadge, SocialLinks, Spinner, VideoLink } from "../components/ui";
+import { Empty, ErrorBox, Flag, RoleBadge, STATUS, SocialLinks, Spinner, VideoLink } from "../components/ui";
 
 type RecordWithLevel = RecordRow & { level: Pick<Level, "id" | "name" | "position"> };
-
-const STATUS: Record<RecordStatus, { label: string; cls: string; icon: typeof Clock }> = {
-  pending: { label: "Pending", cls: "text-amber-400", icon: Clock },
-  approved: { label: "Accepted", cls: "text-emerald-400", icon: CheckCircle2 },
-  rejected: { label: "Rejected", cls: "text-red-400", icon: XCircle },
-};
 
 export default function ProfilePage() {
   const { username } = useParams();

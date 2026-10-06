@@ -1,4 +1,4 @@
-import { History, ListOrdered, ScrollText, Send, Shield, Trophy, Users, Link2, type LucideIcon } from "lucide-react";
+import { History, ListOrdered, ListPlus, ScrollText, Send, Shield, Trophy, Users, Link2, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   to: string;
@@ -12,6 +12,7 @@ export const NAV_MAIN: NavItem[] = [
   { to: "/stats", label: "Stats Viewer", icon: Trophy },
   { to: "/changelog", label: "Changelog", icon: History },
   { to: "/submit", label: "Submit record", icon: Send },
+  { to: "/submit-level", label: "Submit level", icon: ListPlus },
 ];
 
 export const NAV_INFO: NavItem[] = [

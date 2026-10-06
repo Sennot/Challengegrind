@@ -70,3 +70,25 @@ export interface LeaderboardRow {
   rank: number;
   registered: boolean;
 }
+
+export interface LevelSubmission {
+  id: number;
+  submitter_id: string;
+  gd_id: number;
+  /** e.g. "240", "CBF" */
+  fps: string;
+  name: string;
+  creator: string;
+  /** account that uploaded the level */
+  publisher: string;
+  verifier: string;
+  video_url: string;
+  /** player's opinion on where the level belongs */
+  placement: string;
+  telegram: string;
+  status: RecordStatus;
+  review_note: string | null;
+  level_id: number | null;
+  created_at: string;
+  reviewed_at: string | null;
+}
