@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router";
 import { motion } from "framer-motion";
-import { Ban, ListChecks, Settings } from "lucide-react";
+import { Ban, Settings, Trophy } from "lucide-react";
 import { supabase, errorText } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
 import { useAuth } from "../lib/auth";
@@ -51,9 +51,9 @@ export default function ProfilePage() {
 
   const { profile, stats, records, verified } = data;
   const isMe = me?.id === profile.id;
-  const approved = records.filter((r) => r.status === "approved");
-  const visible = isMe ? records : approved;
-  const hardest = [...approved.map((r) => r.level), ...verified].sort((a, b) => a.position - b.position)[0];
+  const completed = records.filter((r) => r.status === "approved").sort((a, b) => a.level.position - b.level.position);
+  const submissions = records.filter((r) => r.status !== "approved");
+  const hardest = [...completed.map((r) => r.level), ...verified].sort((a, b) => a.position - b.position)[0];
 
   async function withdraw(id: number) {
     if (!confirm("Withdraw this submission?")) return;
@@ -98,7 +98,7 @@ export default function ProfilePage() {
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <Stat label="Rank" value={stats ? `#${stats.rank}` : "—"} />
           <Stat label="Points" value={stats ? formatPoints(stats.points) : "0"} />
-          <Stat label="Completed" value={String(approved.length)} />
+          <Stat label="Completed" value={String(completed.length)} />
           <Stat label="Verifications" value={String(verified.length)} />
         </div>
 
@@ -115,32 +115,53 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Verifications */}
-      {verified.length > 0 && <VerifiedList levels={verified} />}
-
-      {/* Records */}
+      {/* Completed challenges */}
       <section className="card">
         <h2 className="flex items-center justify-between border-b border-line px-4 py-3 text-sm font-medium text-muted">
-          <span>{isMe ? "My records & submissions" : "Records"}</span>
-          <span className="tabular-nums">{visible.length}</span>
+          <span>Completed challenges</span>
+          <span className="tabular-nums">{completed.length}</span>
         </h2>
-        {visible.length === 0 ? (
+        {completed.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-muted">
-            <ListChecks className="h-6 w-6" />
+            <Trophy className="h-6 w-6" />
             {isMe ? (
               <>
-                You haven't submitted any records yet.
+                You haven't completed any challenges yet.
                 <Link to="/submit" className="btn-primary mt-2 !py-1.5">
                   Submit a record
                 </Link>
               </>
             ) : (
-              "No accepted records yet"
+              "No completed challenges yet"
             )}
           </div>
         ) : (
           <div className="divide-y divide-line">
-            {visible.map((r) => {
+            {completed.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 px-4 py-2.5">
+                <Link to={`/level/${r.level.id}`} className="min-w-0 flex-1 truncate text-sm">
+                  <span className="tabular-nums text-muted">#{r.level.position}</span> <span className="font-medium text-white hover:text-brand">{r.level.name}</span>
+                </Link>
+                <span className="text-xs tabular-nums text-muted">{formatPoints(levelPoints(r.level.position))}</span>
+                <VideoLink url={r.video_url} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Verifications */}
+      {verified.length > 0 && <VerifiedList levels={verified} />}
+
+      {/* Own pending / rejected submissions (RLS hides them from others) */}
+      {isMe && submissions.length > 0 && (
+        <section className="card">
+          <h2 className="flex items-center justify-between border-b border-line px-4 py-3 text-sm font-medium text-muted">
+            <span>My submissions</span>
+            <span className="tabular-nums">{submissions.length}</span>
+          </h2>
+          <div className="divide-y divide-line">
+            {submissions.map((r) => {
               const s = STATUS[r.status];
               const Icon = s.icon;
               return (
@@ -149,17 +170,15 @@ export default function ProfilePage() {
                     <Link to={`/level/${r.level.id}`} className="min-w-0 flex-1 truncate text-sm">
                       <span className="tabular-nums text-muted">#{r.level.position}</span> <span className="font-medium text-white hover:text-brand">{r.level.name}</span>
                     </Link>
-                    {isMe && <span className="hidden text-xs text-neutral-600 sm:inline">{timeAgo(r.created_at)}</span>}
+                    <span className="hidden text-xs text-neutral-600 sm:inline">{timeAgo(r.created_at)}</span>
                     <span className={`flex items-center gap-1 text-xs ${s.cls}`} title={s.label}>
                       <Icon className="h-4 w-4" />
                       <span className="hidden sm:inline">{s.label}</span>
                     </span>
                     <VideoLink url={r.video_url} />
                   </div>
-                  {isMe && r.review_note && (
-                    <p className={`mt-1 text-xs ${r.status === "rejected" ? "text-red-300" : "text-muted"}`}>Staff note: {r.review_note}</p>
-                  )}
-                  {isMe && r.status === "pending" && (
+                  {r.review_note && <p className={`mt-1 text-xs ${r.status === "rejected" ? "text-red-300" : "text-muted"}`}>Staff note: {r.review_note}</p>}
+                  {r.status === "pending" && (
                     <button onClick={() => withdraw(r.id)} className="mt-1 text-xs text-muted hover:text-red-400">
                       Withdraw
                     </button>
@@ -168,8 +187,8 @@ export default function ProfilePage() {
               );
             })}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </motion.div>
   );
 }
