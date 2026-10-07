@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router";
 import { motion } from "framer-motion";
-import { Ban, Settings, Trophy } from "lucide-react";
+import type { ReactNode } from "react";
+import { BadgeCheck, Ban, Settings, Trophy } from "lucide-react";
 import { supabase, errorText } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
 import { useAuth } from "../lib/auth";
@@ -113,45 +114,23 @@ export default function ProfilePage() {
             <span className="text-sm tabular-nums text-muted">{formatPoints(levelPoints(hardest.position))}</span>
           </Link>
         )}
-      </div>
 
-      {/* Completed challenges */}
-      <section className="card">
-        <h2 className="flex items-center justify-between border-b border-line px-4 py-3 text-sm font-medium text-muted">
-          <span>Completed challenges</span>
-          <span className="tabular-nums">{completed.length}</span>
-        </h2>
-        {completed.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-muted">
-            <Trophy className="h-6 w-6" />
+        <div className="mt-2.5 flex flex-col gap-2.5">
+          <LevelChips title="Completed levels" icon={<Trophy className="h-4 w-4 text-brand" />} levels={completed.map((r) => r.level)}>
             {isMe ? (
               <>
-                You haven't completed any challenges yet.
-                <Link to="/submit" className="btn-primary mt-2 !py-1.5">
+                You haven't completed any challenges yet.{" "}
+                <Link to="/submit" className="text-brand hover:underline">
                   Submit a record
                 </Link>
               </>
             ) : (
               "No completed challenges yet"
             )}
-          </div>
-        ) : (
-          <div className="divide-y divide-line">
-            {completed.map((r) => (
-              <div key={r.id} className="flex items-center gap-3 px-4 py-2.5">
-                <Link to={`/level/${r.level.id}`} className="min-w-0 flex-1 truncate text-sm">
-                  <span className="tabular-nums text-muted">#{r.level.position}</span> <span className="font-medium text-white hover:text-brand">{r.level.name}</span>
-                </Link>
-                <span className="text-xs tabular-nums text-muted">{formatPoints(levelPoints(r.level.position))}</span>
-                <VideoLink url={r.video_url} />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Verifications */}
-      {verified.length > 0 && <VerifiedList levels={verified} />}
+          </LevelChips>
+          {verified.length > 0 && <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />}
+        </div>
+      </div>
 
       {/* Own pending / rejected submissions (RLS hides them from others) */}
       {isMe && submissions.length > 0 && (
@@ -193,17 +172,37 @@ export default function ProfilePage() {
   );
 }
 
-function VerifiedList({ levels }: { levels: Pick<Level, "id" | "name" | "position">[] }) {
+type LevelRef = Pick<Level, "id" | "name" | "position">;
+
+/** Box of level-name chips, hardest first; `children` is shown when the list is empty */
+function LevelChips({ title, icon, levels, verified, children }: { title: string; icon: ReactNode; levels: LevelRef[]; verified?: boolean; children?: ReactNode }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-muted">Verifications</h2>
-      <div className="flex flex-wrap gap-1.5">
-        {levels.map((l) => (
-          <Link key={l.id} to={`/level/${l.id}`} className="rounded-md border border-line px-2.5 py-1 text-sm text-neutral-200 transition-colors hover:border-neutral-600 hover:text-white">
-            <span className="text-muted">#{l.position}</span> {l.name}
-          </Link>
-        ))}
-      </div>
+    <section className={`rounded-lg border p-3 ${verified ? "border-emerald-500/25 bg-emerald-500/[0.06]" : "border-line bg-surface-2"}`}>
+      <h2 className="mb-2.5 flex items-center gap-2 text-sm font-medium text-white">
+        {icon}
+        <span className="flex-1">{title}</span>
+        <span className="rounded-md bg-surface-3 px-1.5 text-xs tabular-nums text-muted">{levels.length}</span>
+      </h2>
+      {levels.length === 0 ? (
+        <p className="text-sm text-muted">{children}</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {[...levels]
+            .sort((a, b) => a.position - b.position)
+            .map((l) => (
+              <Link
+                key={l.id}
+                to={`/level/${l.id}`}
+                title={`#${l.position}`}
+                className={`rounded-md border px-2.5 py-1 text-sm transition-colors ${
+                  verified ? "border-emerald-500/50 text-emerald-200 hover:border-emerald-400 hover:text-white" : "border-line text-neutral-200 hover:border-neutral-600 hover:text-white"
+                }`}
+              >
+                {l.name}
+              </Link>
+            ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -236,8 +235,12 @@ function GuestProfile({ row, verified }: { row: LeaderboardRow; verified: Pick<L
             <span className="text-sm tabular-nums text-muted">{formatPoints(levelPoints(hardest.position))}</span>
           </Link>
         )}
+        {verified.length > 0 && (
+          <div className="mt-2.5">
+            <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />
+          </div>
+        )}
       </div>
-      {verified.length > 0 && <VerifiedList levels={verified} />}
     </motion.div>
   );
 }
