@@ -6,23 +6,25 @@ import { must, useAsync } from "../../lib/useAsync";
 import type { Level, Profile, RecordRow } from "../../lib/types";
 import { timeAgo } from "../../lib/time";
 import { Empty, ErrorBox, Flag, Spinner, VideoLink } from "../../components/ui";
+import { fpsLabel, useList, type ListKind } from "../../lib/list";
 
 type Pending = RecordRow & {
   level: Pick<Level, "id" | "name" | "position">;
   player: Pick<Profile, "username" | "country">;
 };
 
-export default function RecordsTab() {
+export default function RecordsTab({ list }: { list: ListKind }) {
   const { data, loading, error, reload } = useAsync(
     async () =>
       must(
         await supabase
           .from("records")
-          .select("*, level:levels(id, name, position), player:profiles!records_player_id_fkey(username, country)")
+          .select("*, level:levels!inner(id, name, position), player:profiles!records_player_id_fkey(username, country)")
           .eq("status", "pending")
+          .eq("level.list", list)
           .order("created_at"),
       ) as unknown as Pending[],
-    [],
+    [list],
   );
 
   if (loading) return <Spinner />;
@@ -39,6 +41,7 @@ export default function RecordsTab() {
 }
 
 function PendingCard({ r, onDone }: { r: Pending; onDone: () => void }) {
+  const { path } = useList();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -59,15 +62,19 @@ function PendingCard({ r, onDone }: { r: Pending; onDone: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <Flag code={r.player.country} />
-            <Link to={`/player/${r.player.username}`} className="font-medium text-white hover:text-brand">
+            <Link to={path(`/player/${r.player.username}`)} className="font-medium text-white hover:text-brand">
               {r.player.username}
             </Link>
             <span className="text-muted">→</span>
-            <Link to={`/level/${r.level.id}`} className="text-white hover:text-brand">
+            <Link to={path(`/level/${r.level.id}`)} className="text-white hover:text-brand">
               <span className="text-muted">#{r.level.position}</span> {r.level.name}
             </Link>
           </div>
-          <div className="mt-0.5 text-xs text-muted">{timeAgo(r.created_at)}</div>
+          <div className="mt-0.5 text-xs text-muted">
+            {timeAgo(r.created_at)}
+            {r.fps && <> · {fpsLabel(r.fps)}</>}
+            {r.method && <> · {r.method}</>}
+          </div>
           {r.note && <p className="mt-2 whitespace-pre-line rounded-md bg-surface-2 px-3 py-2 text-sm text-neutral-300">{r.note}</p>}
         </div>
         <VideoLink url={r.video_url} />

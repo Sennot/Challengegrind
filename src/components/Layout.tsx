@@ -1,26 +1,51 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, LogIn, LogOut, Menu, Settings, User, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { supabaseConfigured } from "../lib/supabase";
 import { NAV_ADMIN, NAV_INFO, NAV_MAIN, type NavItem } from "./nav";
 import { Flag } from "./ui";
+import { switchPath, useList, type ListKind } from "../lib/list";
 
 function Logo() {
+  const { path } = useList();
   return (
-    <Link to="/" className="flex items-center gap-2.5">
+    <Link to={path("/")} className="flex items-center gap-2.5">
       <img src="/logo.jpg" alt="" className="h-8 w-8 rounded-lg object-cover" />
-      <span className="text-[15px] font-semibold tracking-tight text-white">ChallengeGrind</span>
+      <span className="hidden text-[15px] font-semibold tracking-tight text-white min-[420px]:inline">ChallengeGrind</span>
     </Link>
   );
 }
 
+/** CL / SCL switch: keeps the current page when it exists on the other list */
+function ListSwitch() {
+  const { list } = useList();
+  const { pathname } = useLocation();
+  const nav = useNavigate();
+  const opt = (to: ListKind, label: string, title: string) => (
+    <button
+      onClick={() => to !== list && nav(switchPath(pathname, to))}
+      title={title}
+      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${list === to ? "bg-brand text-black" : "text-muted hover:text-white"}`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex rounded-lg border border-line bg-surface-2 p-0.5">
+      {opt("cl", "CL", "Challenge List")}
+      {opt("scl", "SCL", "Spam Challenge List")}
+    </div>
+  );
+}
+
 function SideLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
+  const { path } = useList();
   const Icon = item.icon;
   return (
     <NavLink
-      to={item.to}
+      to={path(item.to)}
       end={item.to === "/"}
       onClick={onClick}
       className={({ isActive }) =>
@@ -59,6 +84,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function UserMenu() {
+  const { path } = useList();
   const { profile, session, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -71,7 +97,7 @@ function UserMenu() {
 
   if (!session || !profile) {
     return (
-      <Link to="/login" className="btn-primary !px-3 !py-1.5">
+      <Link to={path("/login")} className="btn-primary !px-3 !py-1.5">
         <LogIn className="h-4 w-4" /> Log in
       </Link>
     );
@@ -94,10 +120,10 @@ function UserMenu() {
             transition={{ duration: 0.12 }}
             className="card absolute right-0 mt-1.5 w-48 p-1 shadow-lg shadow-black/40"
           >
-            <Link onClick={() => setOpen(false)} to={`/player/${profile.username}`} className={item}>
+            <Link onClick={() => setOpen(false)} to={path(`/player/${profile.username}`)} className={item}>
               <User className="h-4 w-4 text-muted" /> Profile
             </Link>
-            <Link onClick={() => setOpen(false)} to="/settings" className={item}>
+            <Link onClick={() => setOpen(false)} to={path("/settings")} className={item}>
               <Settings className="h-4 w-4 text-muted" /> Settings
             </Link>
             <button
@@ -136,7 +162,8 @@ export default function Layout() {
             <Menu className="h-5 w-5" />
           </button>
           <Logo />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <ListSwitch />
             <UserMenu />
           </div>
         </div>

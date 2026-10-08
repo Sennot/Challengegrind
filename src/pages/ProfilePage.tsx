@@ -10,13 +10,16 @@ import { formatPoints, levelPoints } from "../lib/points";
 import { countryName } from "../lib/countries";
 import { formatDate, timeAgo } from "../lib/time";
 import { Empty, ErrorBox, Flag, RoleBadge, STATUS, SocialLinks, Spinner, VideoLink } from "../components/ui";
+import { useList } from "../lib/list";
 
 type RecordWithLevel = RecordRow & { level: Pick<Level, "id" | "name" | "position"> };
 
 export default function ProfilePage() {
+  const { path } = useList();
   const { username } = useParams();
   const { profile: me } = useAuth();
 
+  const { list } = useList();
   const { data, loading, error, reload } = useAsync(async () => {
     // ilike for case-insensitive match; escape LIKE wildcards ("_" is allowed in usernames)
     const pattern = (username ?? "").replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -25,17 +28,23 @@ export default function ProfilePage() {
       // Player without an account (e.g. a verifier who hasn't registered yet)
       const name = username ?? "";
       const [stats, verified] = await Promise.all([
-        supabase.from("leaderboard").select("*").eq("registered", false).eq("username", name).maybeSingle(),
-        supabase.from("levels").select("id, name, position").is("verifier_id", null).eq("verifier", name).order("position"),
+        supabase.from("leaderboard").select("*").eq("list", list).eq("registered", false).eq("username", name).maybeSingle(),
+        supabase.from("levels").select("id, name, position").eq("list", list).is("verifier_id", null).eq("verifier", name).order("position"),
       ]);
       const guest = must(stats) as LeaderboardRow | null;
       return guest ? { guest, verified: must(verified) as Pick<Level, "id" | "name" | "position">[] } : null;
     }
+    // Everything below is for the list selected at the top (CL or SCL)
     const [stats, records, verified] = await Promise.all([
-      supabase.from("leaderboard").select("*").eq("id", profile.id).maybeSingle(),
+      supabase.from("leaderboard").select("*").eq("list", list).eq("id", profile.id).maybeSingle(),
       // RLS: others see only approved records; the owner (and staff) also see pending/rejected
-      supabase.from("records").select("*, level:levels(id, name, position)").eq("player_id", profile.id).order("created_at", { ascending: false }),
-      supabase.from("levels").select("id, name, position").eq("verifier_id", profile.id).order("position"),
+      supabase
+        .from("records")
+        .select("*, level:levels!inner(id, name, position)")
+        .eq("player_id", profile.id)
+        .eq("level.list", list)
+        .order("created_at", { ascending: false }),
+      supabase.from("levels").select("id, name, position").eq("list", list).eq("verifier_id", profile.id).order("position"),
     ]);
     return {
       profile,
@@ -43,11 +52,11 @@ export default function ProfilePage() {
       records: must(records) as unknown as RecordWithLevel[],
       verified: must(verified) as Pick<Level, "id" | "name" | "position">[],
     };
-  }, [username]);
+  }, [username, list]);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorBox message={error} />;
-  if (!data) return <Empty>Player not found</Empty>;
+  if (!data) return <Empty>{list === "scl" ? "Player not found on the SCL" : "Player not found"}</Empty>;
   if (data.guest) return <GuestProfile row={data.guest} verified={data.verified} />;
 
   const { profile, stats, records, verified } = data;
@@ -82,7 +91,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-1">
             <SocialLinks s={profile} />
             {isMe && (
-              <Link to="/settings" className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-white" title="Settings">
+              <Link to={path("/settings")} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-3 hover:text-white" title="Settings">
                 <Settings className="h-4 w-4" />
               </Link>
             )}
@@ -104,7 +113,7 @@ export default function ProfilePage() {
         </div>
 
         {hardest && (
-          <Link to={`/level/${hardest.id}`} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
+          <Link to={path(`/level/${hardest.id}`)} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
             <div>
               <div className="text-xs text-muted">Hardest level</div>
               <div className="mt-0.5 font-medium text-white">
@@ -120,7 +129,7 @@ export default function ProfilePage() {
             {isMe ? (
               <>
                 You haven't completed any challenges yet.{" "}
-                <Link to="/submit" className="text-brand hover:underline">
+                <Link to={path("/submit")} className="text-brand hover:underline">
                   Submit a record
                 </Link>
               </>
@@ -146,7 +155,7 @@ export default function ProfilePage() {
               return (
                 <div key={r.id} className="px-4 py-2.5">
                   <div className="flex items-center gap-3">
-                    <Link to={`/level/${r.level.id}`} className="min-w-0 flex-1 truncate text-sm">
+                    <Link to={path(`/level/${r.level.id}`)} className="min-w-0 flex-1 truncate text-sm">
                       <span className="tabular-nums text-muted">#{r.level.position}</span> <span className="font-medium text-white hover:text-brand">{r.level.name}</span>
                     </Link>
                     <span className="hidden text-xs text-neutral-600 sm:inline">{timeAgo(r.created_at)}</span>
@@ -176,6 +185,7 @@ type LevelRef = Pick<Level, "id" | "name" | "position">;
 
 /** Box of level-name chips, hardest first; `children` is shown when the list is empty */
 function LevelChips({ title, icon, levels, verified, children }: { title: string; icon: ReactNode; levels: LevelRef[]; verified?: boolean; children?: ReactNode }) {
+  const { path } = useList();
   return (
     <section className={`rounded-lg border p-3 ${verified ? "border-emerald-500/25 bg-emerald-500/[0.06]" : "border-line bg-surface-2"}`}>
       <h2 className="mb-2.5 flex items-center gap-2 text-sm font-medium text-white">
@@ -192,7 +202,7 @@ function LevelChips({ title, icon, levels, verified, children }: { title: string
             .map((l) => (
               <Link
                 key={l.id}
-                to={`/level/${l.id}`}
+                to={path(`/level/${l.id}`)}
                 title={`#${l.position}`}
                 className={`rounded-md border px-2.5 py-1 text-sm transition-colors ${
                   verified ? "border-emerald-500/50 text-emerald-200 hover:border-emerald-400 hover:text-white" : "border-line text-neutral-200 hover:border-neutral-600 hover:text-white"
@@ -208,6 +218,7 @@ function LevelChips({ title, icon, levels, verified, children }: { title: string
 }
 
 function GuestProfile({ row, verified }: { row: LeaderboardRow; verified: Pick<Level, "id" | "name" | "position">[] }) {
+  const { path } = useList();
   const hardest = verified[0];
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mx-auto flex max-w-3xl flex-col gap-4">
@@ -225,7 +236,7 @@ function GuestProfile({ row, verified }: { row: LeaderboardRow; verified: Pick<L
           <Stat label="Verifications" value={String(row.verifications)} />
         </div>
         {hardest && (
-          <Link to={`/level/${hardest.id}`} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
+          <Link to={path(`/level/${hardest.id}`)} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
             <div>
               <div className="text-xs text-muted">Hardest level</div>
               <div className="mt-0.5 font-medium text-white">

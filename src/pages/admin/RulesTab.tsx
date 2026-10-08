@@ -3,13 +3,14 @@ import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
 import { supabase, errorText } from "../../lib/supabase";
 import { useAsync } from "../../lib/useAsync";
 import { fetchRules } from "../../lib/rules";
+import type { ListKind } from "../../lib/list";
 import { ErrorBox, Spinner } from "../../components/ui";
 
 // Editing form: items are kept as one textarea per section, one rule per line
 type Draft = { title: string; text: string };
 
-export default function RulesTab() {
-  const { data, loading, error } = useAsync(fetchRules, []);
+export default function RulesTab({ list }: { list: ListKind }) {
+  const { data, loading, error } = useAsync(() => fetchRules(list), [list]);
   const [sections, setSections] = useState<Draft[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,7 +34,7 @@ export default function RulesTab() {
       .filter((s) => s.title || s.items.length);
     if (rules.some((s) => !s.title)) return setMsg({ ok: false, text: "Every section needs a title" });
     setBusy(true);
-    const { error } = await supabase.rpc("set_rules", { p_rules: rules });
+    const { error } = await supabase.rpc("set_rules", { p_rules: rules, p_list: list });
     setBusy(false);
     setMsg(error ? { ok: false, text: errorText(error) } : { ok: true, text: "Rules saved" });
   }

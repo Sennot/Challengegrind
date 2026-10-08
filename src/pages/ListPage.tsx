@@ -7,22 +7,24 @@ import type { Level } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { youtubeId, ytThumb } from "../lib/video";
 import { Empty, ErrorBox, PageHeader, PositionBadge, Spinner } from "../components/ui";
+import { LIST_TITLE, useList } from "../lib/list";
 
 export default function ListPage() {
+  const { list } = useList();
   const { data, loading, error, reload } = useAsync(
-    async () => must(await supabase.from("levels").select("*").order("position")) as Level[],
-    [],
+    async () => must(await supabase.from("levels").select("*").eq("list", list).order("position")) as Level[],
+    [list],
   );
   const [q, setQ] = useState("");
 
   // Refresh when moderators change the list
   useEffect(() => {
     const ch = supabase
-      .channel("levels-live")
+      .channel(`levels-live-${list}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "levels" }, () => void reload())
       .subscribe();
     return () => void supabase.removeChannel(ch);
-  }, [reload]);
+  }, [reload, list]);
 
   const levels = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -33,7 +35,7 @@ export default function ListPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
-        title="Challenge list"
+        title={LIST_TITLE[list]}
         subtitle={data ? `${data.length} levels` : undefined}
         right={
           <div className="relative w-full sm:w-64">
@@ -61,10 +63,11 @@ export default function ListPage() {
 }
 
 function LevelCard({ level }: { level: Level }) {
+  const { path } = useList();
   const yt = youtubeId(level.video_url);
   return (
     <Link
-      to={`/level/${level.id}`}
+      to={path(`/level/${level.id}`)}
       className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-line bg-transparent p-3 transition-colors hover:border-neutral-600 sm:gap-4 sm:p-4"
     >
       {/* Blurred verification thumbnail as the card cover */}
@@ -90,6 +93,12 @@ function LevelCard({ level }: { level: Level }) {
                 {" "}
                 <span className="text-neutral-600">·</span> {level.fps}
                 {/^\d+$/.test(level.fps) ? " FPS" : ""}
+              </>
+            )}
+            {level.method && (
+              <>
+                {" "}
+                <span className="text-neutral-600">·</span> {level.method}
               </>
             )}
           </p>

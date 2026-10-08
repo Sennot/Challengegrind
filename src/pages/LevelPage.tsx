@@ -7,11 +7,13 @@ import type { Level, Profile } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { formatDate } from "../lib/time";
 import { Empty, ErrorBox, Flag, Spinner, VideoEmbed, VideoLink } from "../components/ui";
+import { fpsLabel, listPath, useList } from "../lib/list";
 
-type Victor = { id: number; video_url: string; reviewed_at: string | null; player: Pick<Profile, "username" | "country" | "banned"> };
+type Victor = { id: number; video_url: string; reviewed_at: string | null; fps: string | null; method: string | null; player: Pick<Profile, "username" | "country" | "banned"> };
 type LevelWithVerifier = Level & { verifier_profile: Pick<Profile, "username" | "country"> | null };
 
 export default function LevelPage() {
+  const { path } = useList();
   const { id } = useParams();
   const { data, loading, error } = useAsync(async () => {
     const level = must(
@@ -26,7 +28,7 @@ export default function LevelPage() {
       must(
         await supabase
           .from("records")
-          .select("id, video_url, reviewed_at, player:profiles!records_player_id_fkey(username, country, banned)")
+          .select("id, video_url, reviewed_at, fps, method, player:profiles!records_player_id_fkey(username, country, banned)")
           .eq("level_id", level.id)
           .eq("status", "approved")
           .order("reviewed_at"),
@@ -44,8 +46,8 @@ export default function LevelPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <Link to="/" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-white">
-        <ArrowLeft className="h-4 w-4" /> Back to list
+      <Link to={listPath(level.list, "/")} className="inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-white">
+        <ArrowLeft className="h-4 w-4" /> Back to {level.list === "scl" ? "SCL" : "list"}
       </Link>
 
       <div>
@@ -56,11 +58,11 @@ export default function LevelPage() {
         <p className="mt-1 text-sm text-muted">
           by <span className="text-neutral-200">{level.creator}</span> · verified by{" "}
           {level.verifier_profile ? (
-            <Link to={`/player/${level.verifier_profile.username}`} className="text-neutral-200 hover:text-brand">
+            <Link to={path(`/player/${level.verifier_profile.username}`)} className="text-neutral-200 hover:text-brand">
               {level.verifier}
             </Link>
           ) : (
-            <Link to={`/player/${encodeURIComponent(level.verifier)}`} className="text-neutral-200 hover:text-brand">
+            <Link to={path(`/player/${encodeURIComponent(level.verifier)}`)} className="text-neutral-200 hover:text-brand">
               {level.verifier}
             </Link>
           )}
@@ -69,11 +71,12 @@ export default function LevelPage() {
 
       <VideoEmbed url={level.video_url} title={level.name} />
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+      <div className={`grid grid-cols-2 gap-2.5 ${level.list === "scl" ? "sm:grid-cols-6" : "sm:grid-cols-5"}`}>
         <Stat label="Points" value={formatPoints(levelPoints(level.position))} />
         <Stat label="Position" value={`#${level.position}`} />
         <Stat label="Victors" value={String(victors.length)} />
         <Stat label="FPS" value={level.fps ?? "—"} />
+        {level.list === "scl" && <Stat label="Method" value={level.method ?? "—"} />}
         <div className="card p-3">
           <div className="text-xs text-muted">Level ID</div>
           {level.gd_id ? (
@@ -104,9 +107,10 @@ export default function LevelPage() {
             {victors.map((v) => (
               <div key={v.id} className="flex items-center gap-3 px-4 py-2.5">
                 <Flag code={v.player.country} />
-                <Link to={`/player/${v.player.username}`} className="min-w-0 flex-1 truncate text-sm font-medium text-white hover:text-brand">
+                <Link to={path(`/player/${v.player.username}`)} className="min-w-0 flex-1 truncate text-sm font-medium text-white hover:text-brand">
                   {v.player.username}
                 </Link>
+                {(v.fps || v.method) && <span className="text-xs text-neutral-400">{[v.fps && fpsLabel(v.fps), v.method].filter(Boolean).join(" · ")}</span>}
                 {v.reviewed_at && <span className="hidden text-xs text-muted sm:inline">{formatDate(v.reviewed_at)}</span>}
                 <VideoLink url={v.video_url} />
               </div>
@@ -122,7 +126,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="card p-3">
       <div className="text-xs text-muted">{label}</div>
-      <div className="mt-0.5 font-semibold tabular-nums text-white">{value}</div>
+      <div className="mt-0.5 truncate font-semibold tabular-nums text-white" title={value}>{value}</div>
     </div>
   );
 }

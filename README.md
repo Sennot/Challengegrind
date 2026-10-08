@@ -64,3 +64,10 @@ npm run dev
 ## Очки
 
 `100 × 0.965^(позиция − 1)` — функция `public.level_points` в SQL и `src/lib/points.ts` на фронте (держать одинаковыми).
+
+## Два списка: CL и SCL
+
+Challenge List живёт на `/…`, Spam Challenge List — на `/scl/…` (переключатель CL / SCL в шапке).
+У каждого списка свои позиции, changelog, Stats Viewer, правила и заявки уровней (`levels.list`, миграция `0012_spam_list.sql`);
+аккаунты, роли и баны общие. На SCL у уровней, рекордов и заявок обязательны FPS и Method (например, Alternating).
+Очки на обоих списках считаются по одной формуле.

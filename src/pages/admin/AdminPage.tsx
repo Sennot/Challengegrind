@@ -8,6 +8,7 @@ import LevelsTab from "./LevelsTab";
 import SubmissionsTab from "./SubmissionsTab";
 import UsersTab from "./UsersTab";
 import RulesTab from "./RulesTab";
+import { useList } from "../../lib/list";
 
 const TABS = [
   { id: "records", label: "Records", icon: ClipboardCheck, minRank: 1 },
@@ -18,16 +19,17 @@ const TABS = [
 ] as const;
 
 export default function AdminPage() {
+  const { list, isScl, path } = useList();
   const { rank, loading } = useAuth();
   const available = TABS.filter((t) => rank >= t.minRank);
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("records");
 
   if (loading) return <Spinner />;
-  if (rank < 1) return <Navigate to="/" replace />;
+  if (rank < 1) return <Navigate to={path("/")} replace />;
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title="Admin panel" />
+      <PageHeader title={isScl ? "Admin panel · SCL" : "Admin panel · CL"} subtitle="Records, levels, submissions and rules apply to the list selected at the top; players & staff are shared." />
       <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line">
         {available.map((t) => {
           const Icon = t.icon;
@@ -46,11 +48,11 @@ export default function AdminPage() {
           );
         })}
       </div>
-      {tab === "records" && <RecordsTab />}
-      {tab === "levels" && rank >= 2 && <LevelsTab />}
-      {tab === "submissions" && rank >= 2 && <SubmissionsTab />}
+      {tab === "records" && <RecordsTab key={list} list={list} />}
+      {tab === "levels" && rank >= 2 && <LevelsTab key={list} list={list} />}
+      {tab === "submissions" && rank >= 2 && <SubmissionsTab key={list} list={list} />}
       {tab === "users" && rank >= 3 && <UsersTab />}
-      {tab === "rules" && rank >= 3 && <RulesTab />}
+      {tab === "rules" && rank >= 3 && <RulesTab key={list} list={list} />}
     </div>
   );
 }

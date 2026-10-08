@@ -7,6 +7,8 @@ import { useAuth } from "../lib/auth";
 import type { LevelSubmission, Profile } from "../lib/types";
 import { timeAgo } from "../lib/time";
 import { Empty, ErrorBox, PageHeader, STATUS, Spinner, VideoLink } from "../components/ui";
+import { useList } from "../lib/list";
+import MethodInput from "../components/MethodInput";
 
 const TITLE = "Submit a level";
 // Same rules as the database checks (migration 0009)
@@ -17,6 +19,7 @@ const TG_RE = /^[A-Za-z0-9_]{4,32}$/;
 type Draft = {
   gd_id: string;
   fps: string;
+  method: string;
   name: string;
   creator: string;
   publisher: string;
@@ -27,6 +30,7 @@ type Draft = {
 };
 
 export default function SubmitLevelPage() {
+  const { path } = useList();
   const { session, profile, loading: authLoading } = useAuth();
 
   if (authLoading) return <Spinner />;
@@ -37,8 +41,8 @@ export default function SubmitLevelPage() {
         <div className="card flex flex-col items-center gap-4 p-8 text-center">
           <p className="text-sm text-muted">You need an account to submit levels.</p>
           <div className="flex gap-2">
-            <Link to="/login" className="btn-primary">Log in</Link>
-            <Link to="/register" className="btn-ghost">Sign up</Link>
+            <Link to={path("/login")} className="btn-primary">Log in</Link>
+            <Link to={path("/register")} className="btn-ghost">Sign up</Link>
           </div>
         </div>
       </div>
@@ -56,13 +60,16 @@ export default function SubmitLevelPage() {
 }
 
 function SubmitLevelForm({ profile }: { profile: Profile }) {
+  const { list, isScl, path } = useList();
   const mine = useAsync(
     async () =>
-      must(await supabase.from("level_submissions").select("*").eq("submitter_id", profile.id).order("created_at", { ascending: false }).limit(20)) as LevelSubmission[],
-    [profile.id],
+      must(
+        await supabase.from("level_submissions").select("*").eq("submitter_id", profile.id).eq("list", list).order("created_at", { ascending: false }).limit(20),
+      ) as LevelSubmission[],
+    [profile.id, list],
   );
 
-  const empty: Draft = { gd_id: "", fps: "", name: "", creator: "", publisher: "", verifier: "", video_url: "", placement: "", telegram: profile.social_telegram ?? "" };
+  const empty: Draft = { gd_id: "", fps: "", method: "", name: "", creator: "", publisher: "", verifier: "", video_url: "", placement: "", telegram: profile.social_telegram ?? "" };
   const [d, setD] = useState<Draft>(empty);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -70,6 +77,7 @@ function SubmitLevelForm({ profile }: { profile: Profile }) {
   function validate(): string | null {
     if (!/^\d{1,12}$/.test(d.gd_id.trim()) || Number(d.gd_id) <= 0) return "Level ID must be digits only";
     if (!FPS_RE.test(d.fps.trim())) return "FPS: e.g. 240 or CBF";
+    if (isScl && !d.method.trim()) return "Enter the click method";
     if (!d.name.trim()) return "Enter the level name";
     if (!d.creator.trim()) return "Enter the creator(s)";
     if (!d.publisher.trim()) return "Enter the publisher";
@@ -91,6 +99,8 @@ function SubmitLevelForm({ profile }: { profile: Profile }) {
     const { error } = await supabase.from("level_submissions").insert({
       gd_id: Number(d.gd_id),
       fps: d.fps.trim(),
+      list,
+      ...(isScl && { method: d.method.trim() }),
       name: d.name.trim(),
       creator: d.creator.trim(),
       publisher: d.publisher.trim(),
@@ -104,7 +114,7 @@ function SubmitLevelForm({ profile }: { profile: Profile }) {
       const text = error.message.includes("level_submissions_one_pending_idx")
         ? "You already have a pending submission of this level"
         : error.message.includes("already on the list")
-          ? "This level is already on the list"
+          ? `This level is already on the ${isScl ? "SCL" : "list"}`
           : error.message.includes("too many pending")
             ? "Too many pending level submissions (max 3)"
             : errorText(error);
@@ -132,13 +142,19 @@ function SubmitLevelForm({ profile }: { profile: Profile }) {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title={TITLE} />
+      <PageHeader title={isScl ? "Submit an SCL level" : TITLE} />
 
       <form onSubmit={submit} className="card flex flex-col gap-4 p-5">
         <div className="grid gap-4 sm:grid-cols-2">
           {f("gd_id", "Level ID", "e.g. 12345678")}
           {f("fps", "FPS", "e.g. 240 or CBF")}
         </div>
+        {isScl && (
+          <div>
+            <label className="label">Method</label>
+            <MethodInput value={d.method} onChange={(method) => setD({ ...d, method })} />
+          </div>
+        )}
         {f("name", "Level name", "Level name")}
         <div className="grid gap-4 sm:grid-cols-2">
           {f("creator", "Creator(s)", "e.g. Player1, Player2")}
@@ -204,13 +220,16 @@ function SubmitLevelForm({ profile }: { profile: Profile }) {
                   <div className="flex items-center gap-3">
                     <div className="min-w-0 flex-1 truncate text-sm">
                       {s.level_id ? (
-                        <Link to={`/level/${s.level_id}`} className="font-medium text-white hover:text-brand">
+                        <Link to={path(`/level/${s.level_id}`)} className="font-medium text-white hover:text-brand">
                           {s.name}
                         </Link>
                       ) : (
                         <span className="font-medium text-white">{s.name}</span>
                       )}{" "}
-                      <span className="text-muted">· {s.fps}</span>
+                      <span className="text-muted">
+                        · {s.fps}
+                        {s.method && ` · ${s.method}`}
+                      </span>
                     </div>
                     <span className="hidden text-xs text-neutral-600 sm:inline">{timeAgo(s.created_at)}</span>
                     <span className={`flex items-center gap-1 text-xs ${st.cls}`} title={st.label}>

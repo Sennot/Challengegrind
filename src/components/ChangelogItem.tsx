@@ -3,10 +3,12 @@ import { Link } from "react-router";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import type { ChangelogEntry } from "../lib/types";
 import { timeAgo } from "../lib/time";
+import { useList } from "../lib/list";
 
 function Lvl({ id, name }: { id?: number | null; name: string }) {
+  const { path } = useList();
   return id ? (
-    <Link to={`/level/${id}`} className="font-medium text-white hover:text-brand">
+    <Link to={path(`/level/${id}`)} className="font-medium text-white hover:text-brand">
       {name}
     </Link>
   ) : (

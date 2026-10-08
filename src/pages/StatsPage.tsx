@@ -7,11 +7,13 @@ import type { LeaderboardRow } from "../lib/types";
 import { formatPoints } from "../lib/points";
 import { COUNTRIES } from "../lib/countries";
 import { Empty, ErrorBox, Flag, PageHeader, Spinner } from "../components/ui";
+import { useList } from "../lib/list";
 
 export default function StatsPage() {
+  const { list, isScl, path } = useList();
   const { data, loading, error } = useAsync(
-    async () => must(await supabase.from("leaderboard").select("*").order("rank").limit(1000)) as LeaderboardRow[],
-    [],
+    async () => must(await supabase.from("leaderboard").select("*").eq("list", list).order("rank").limit(1000)) as LeaderboardRow[],
+    [list],
   );
   const [q, setQ] = useState("");
   const [country, setCountry] = useState("");
@@ -28,7 +30,7 @@ export default function StatsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title="Stats Viewer" />
+      <PageHeader title={isScl ? "SCL Stats Viewer" : "Stats Viewer"} />
 
       <div className="mb-4 flex flex-col gap-2.5 sm:flex-row">
         <div className="relative flex-1">
@@ -64,7 +66,7 @@ export default function StatsPage() {
             {rows.map((r) => (
               <Link
                 key={r.id ?? `guest:${r.username}`}
-                to={`/player/${encodeURIComponent(r.username)}`}
+                to={path(`/player/${encodeURIComponent(r.username)}`)}
                 className="grid grid-cols-[2.75rem_1fr_auto] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2 md:grid-cols-[3.5rem_1fr_6rem_5rem_minmax(0,1fr)] md:gap-4"
               >
                 <span className={`tabular-nums font-semibold ${r.rank <= 3 ? "text-brand" : "text-neutral-500"}`}>{r.rank}</span>

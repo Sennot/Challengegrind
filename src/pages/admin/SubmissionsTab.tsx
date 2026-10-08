@@ -9,23 +9,25 @@ import type { Level, LevelSubmission, Profile } from "../../lib/types";
 import { timeAgo } from "../../lib/time";
 import { BrandIcon, Empty, ErrorBox, Flag, Spinner, VideoLink } from "../../components/ui";
 import { DraftFields, validate, type Draft } from "./LevelsTab";
+import { fpsLabel, useList, type ListKind } from "../../lib/list";
 
 type Pending = LevelSubmission & { submitter: Pick<Profile, "username" | "country"> };
 type ListLevel = Pick<Level, "id" | "name" | "position">;
 
 /** List Moderator+: review level submissions. Accepting puts the level on the list. */
-export default function SubmissionsTab() {
+export default function SubmissionsTab({ list }: { list: ListKind }) {
   const { data, loading, error, reload } = useAsync(async () => {
     const subs = must(
       await supabase
         .from("level_submissions")
         .select("*, submitter:profiles!level_submissions_submitter_id_fkey(username, country)")
         .eq("status", "pending")
+        .eq("list", list)
         .order("created_at"),
     ) as unknown as Pending[];
-    const levels = must(await supabase.from("levels").select("id, name, position").order("position")) as ListLevel[];
+    const levels = must(await supabase.from("levels").select("id, name, position").eq("list", list).order("position")) as ListLevel[];
     return { subs, levels };
-  }, []);
+  }, [list]);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorBox message={error} />;
@@ -41,6 +43,7 @@ export default function SubmissionsTab() {
 }
 
 function SubmissionCard({ s, levels, onDone }: { s: Pending; levels: ListLevel[]; onDone: () => void }) {
+  const { path } = useList();
   const [accepting, setAccepting] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,7 +66,8 @@ function SubmissionCard({ s, levels, onDone }: { s: Pending; levels: ListLevel[]
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="font-semibold text-white">{s.name}</span>
             <span className="text-xs text-muted">
-              ID {s.gd_id} · {s.fps} FPS
+              ID {s.gd_id} · {fpsLabel(s.fps)}
+              {s.method && ` · ${s.method}`}
             </span>
           </div>
           <div className="mt-0.5 text-sm text-neutral-300">
@@ -72,7 +76,7 @@ function SubmissionCard({ s, levels, onDone }: { s: Pending; levels: ListLevel[]
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <span className="text-muted">Submitted by</span>
             <Flag code={s.submitter.country} />
-            <Link to={`/player/${s.submitter.username}`} className="font-medium text-white hover:text-brand">
+            <Link to={path(`/player/${s.submitter.username}`)} className="font-medium text-white hover:text-brand">
               {s.submitter.username}
             </Link>
             <a href={`https://t.me/${s.telegram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted hover:text-white">
@@ -125,6 +129,7 @@ function AcceptDialog({ s, levels, onClose, onDone }: { s: Pending; levels: List
     gd_id: String(s.gd_id),
     video_url: s.video_url,
     fps: s.fps,
+    method: s.method ?? "",
   });
   const [pos, setPos] = useState("");
   const [note, setNote] = useState("");
@@ -144,7 +149,7 @@ function AcceptDialog({ s, levels, onClose, onDone }: { s: Pending; levels: List
 
   async function accept() {
     setErr("");
-    const v = validate(draft) ?? (!validPos ? `Choose a position from 1 to ${total + 1}` : null);
+    const v = validate(draft, s.list) ?? (!validPos ? `Choose a position from 1 to ${total + 1}` : null);
     if (v) return setErr(v);
     setBusy(true);
     const { error } = await supabase.rpc("accept_level_submission", {
@@ -157,6 +162,7 @@ function AcceptDialog({ s, levels, onClose, onDone }: { s: Pending; levels: List
       p_fps: draft.fps.trim() || null,
       p_position: n,
       p_note: note.trim() || null,
+      p_method: draft.method.trim() || null,
     });
     setBusy(false);
     if (error) return setErr(errorText(error));
@@ -188,7 +194,7 @@ function AcceptDialog({ s, levels, onClose, onDone }: { s: Pending; levels: List
           </button>
         </div>
 
-        <DraftFields d={draft} set={setDraft} />
+        <DraftFields d={draft} set={setDraft} list={s.list} />
         <p className="-mt-2 text-xs text-muted">Publisher: {s.publisher}</p>
 
         <div className="rounded-lg border border-line p-3">

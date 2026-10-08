@@ -7,13 +7,15 @@ import type { Profile, Role } from "../lib/types";
 import { SOCIALS } from "../config/site";
 import { fetchRules } from "../lib/rules";
 import { BrandIcon, Empty, ErrorBox, Flag, PageHeader, SocialLinks, Spinner } from "../components/ui";
+import { useList } from "../lib/list";
 
 export function RulesPage() {
-  const { data, loading, error } = useAsync(fetchRules, []);
+  const { list, isScl } = useList();
+  const { data, loading, error } = useAsync(() => fetchRules(list), [list]);
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Rules" />
-      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : null}
+      <PageHeader title={isScl ? "SCL Rules" : "Rules"} />
+      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : !data?.length ? <Empty>No rules yet</Empty> : null}
       <div className="flex flex-col gap-3">
         {data?.map((section, i) => (
           <section key={section.title} className="card p-5">
@@ -39,6 +41,7 @@ export function RulesPage() {
 const TEAM_ORDER: Role[] = ["owner", "admin", "moderator", "helper"];
 
 export function TeamPage() {
+  const { path } = useList();
   const { data, loading, error } = useAsync(
     async () => must(await supabase.from("profiles").select("*").neq("role", "player")) as Profile[],
     [],
@@ -65,7 +68,7 @@ export function TeamPage() {
                   {members.map((m) => (
                     <div key={m.id} className="flex items-center gap-3 px-4 py-2.5">
                       <Flag code={m.country} />
-                      <Link to={`/player/${m.username}`} className="min-w-0 flex-1 truncate text-sm font-medium text-white hover:text-brand">
+                      <Link to={path(`/player/${m.username}`)} className="min-w-0 flex-1 truncate text-sm font-medium text-white hover:text-brand">
                         {m.username}
                       </Link>
                       <SocialLinks s={m} />
@@ -110,11 +113,12 @@ export function SocialsPage() {
 }
 
 export function NotFoundPage() {
+  const { path } = useList();
   return (
     <div className="flex flex-col items-center gap-3 py-24 text-center">
       <div className="text-5xl font-semibold text-white">404</div>
       <p className="text-sm text-muted">Page not found</p>
-      <Link to="/" className="btn-ghost mt-2">
+      <Link to={path("/")} className="btn-ghost mt-2">
         Back to list
       </Link>
     </div>

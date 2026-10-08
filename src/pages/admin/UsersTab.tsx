@@ -7,6 +7,7 @@ import { useAuth } from "../../lib/auth";
 import { ROLE_LABEL, ROLE_RANK } from "../../lib/roles";
 import type { Profile, Role } from "../../lib/types";
 import { Empty, Flag, RoleBadge, Spinner } from "../../components/ui";
+import { useList } from "../../lib/list";
 
 const ROLES: Role[] = ["player", "helper", "moderator", "admin", "owner"];
 
@@ -80,6 +81,7 @@ export default function UsersTab() {
 }
 
 function UserRow({ u, onChange, report }: { u: Profile; onChange: () => void; report: (text: string, error: unknown) => void }) {
+  const { path } = useList();
   const { profile: me, rank } = useAuth();
   const manageable = u.id !== me?.id && ROLE_RANK[u.role] < rank;
 
@@ -113,7 +115,7 @@ function UserRow({ u, onChange, report }: { u: Profile; onChange: () => void; re
     <div className="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <Flag code={u.country} />
-        <Link to={`/player/${u.username}`} className={`truncate text-sm font-medium hover:text-brand ${u.banned ? "text-muted line-through" : "text-white"}`}>
+        <Link to={path(`/player/${u.username}`)} className={`truncate text-sm font-medium hover:text-brand ${u.banned ? "text-muted line-through" : "text-white"}`}>
           {u.username}
         </Link>
         <RoleBadge role={u.role} />
