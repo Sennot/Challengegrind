@@ -63,4 +63,4 @@ npm run dev
 
 ## Очки
 
-`300 × 0.965^(позиция − 1)` — функция `public.level_points` в SQL и `src/lib/points.ts` на фронте (держать одинаковыми).
+`100 × 0.965^(позиция − 1)` — функция `public.level_points` в SQL и `src/lib/points.ts` на фронте (держать одинаковыми).
