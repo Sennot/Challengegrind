@@ -69,6 +69,9 @@ export interface LeaderboardRow {
   hardest_name: string;
   rank: number;
   registered: boolean;
+  /** bonus points from completed packs (already included in `points`) */
+  pack_bonus: number;
+  packs_completed: number;
 }
 
 export interface LevelSubmission {

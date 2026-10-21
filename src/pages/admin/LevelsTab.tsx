@@ -75,7 +75,7 @@ export default function LevelsTab() {
   }
 
   async function remove(l: Level) {
-    if (!confirm(`Remove "${l.name}" from #${l.position}? All records on this level will be deleted too.`)) return;
+    if (!confirm(`Remove "${l.name}" from #${l.position}? All records on this level will be deleted and it leaves its packs.`)) return;
     const { error } = await supabase.rpc("remove_level", { p_level_id: l.id });
     if (error) alert(errorText(error));
     void reload();

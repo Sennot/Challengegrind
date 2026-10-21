@@ -7,6 +7,8 @@ import type { Level } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { youtubeId, ytThumb } from "../lib/video";
 import { Empty, ErrorBox, PageHeader, PositionBadge, Spinner } from "../components/ui";
+import { DoneCheck } from "../components/PackBadge";
+import { useMyCompletions } from "../lib/completions";
 
 export default function ListPage() {
   const { data, loading, error, reload } = useAsync(
@@ -14,6 +16,7 @@ export default function ListPage() {
     [],
   );
   const [q, setQ] = useState("");
+  const { done } = useMyCompletions();
 
   // Refresh when moderators change the list
   useEffect(() => {
@@ -34,7 +37,7 @@ export default function ListPage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Challenge list"
-        subtitle={data ? `${data.length} levels` : undefined}
+        subtitle={data ? `${data.length} levels${done.size ? ` · ${data.filter((l) => done.has(l.id)).length} completed` : ""}` : undefined}
         right={
           <div className="relative w-full sm:w-64">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -52,7 +55,7 @@ export default function ListPage() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {levels.map((l) => (
-            <LevelCard key={l.id} level={l} />
+            <LevelCard key={l.id} level={l} done={done.has(l.id)} />
           ))}
         </div>
       )}
@@ -60,12 +63,14 @@ export default function ListPage() {
   );
 }
 
-function LevelCard({ level }: { level: Level }) {
+function LevelCard({ level, done }: { level: Level; done: boolean }) {
   const yt = youtubeId(level.video_url);
   return (
     <Link
       to={`/level/${level.id}`}
-      className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-line bg-transparent p-3 transition-colors hover:border-neutral-600 sm:gap-4 sm:p-4"
+      className={`group relative flex items-center gap-3 overflow-hidden rounded-xl border bg-transparent p-3 transition-colors sm:gap-4 sm:p-4 ${
+        done ? "border-emerald-500/35 hover:border-emerald-400/60" : "border-line hover:border-neutral-600"
+      }`}
     >
       {/* Blurred verification thumbnail as the card cover */}
       {yt && (
@@ -82,7 +87,10 @@ function LevelCard({ level }: { level: Level }) {
       <div className="relative flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
         <PositionBadge position={level.position} />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-white sm:text-lg">{level.name}</h3>
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 className="truncate text-base font-semibold text-white sm:text-lg">{level.name}</h3>
+            {done && <DoneCheck title="You completed this level" />}
+          </div>
           <p className="truncate text-sm text-neutral-400">
             {level.creator} <span className="text-neutral-600">·</span> verified by {level.verifier}
             {level.fps && (

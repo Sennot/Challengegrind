@@ -8,6 +8,7 @@ import type { Level } from "../lib/types";
 import { isHttpsUrl } from "../lib/video";
 import LevelPicker from "../components/LevelPicker";
 import { ErrorBox, PageHeader, Spinner } from "../components/ui";
+import { useMyCompletions } from "../lib/completions";
 
 export default function SubmitPage() {
   const { session, profile, loading: authLoading } = useAuth();
@@ -40,6 +41,10 @@ export default function SubmitPage() {
 
 function SubmitForm({ username }: { username: string }) {
   const levels = useAsync(async () => must(await supabase.from("levels").select("id, name, position, creator, video_url").order("position")) as Level[], []);
+  // Completed (accepted or verified) and pending levels can't take another record
+  const { done, pending, reload: reloadMine } = useMyCompletions();
+  const open = (levels.data ?? []).filter((l) => !done.has(l.id) && !pending.has(l.id));
+  const hidden = (levels.data?.length ?? 0) - open.length;
 
   const [levelId, setLevelId] = useState<number | null>(null);
   const [video, setVideo] = useState("");
@@ -64,6 +69,7 @@ function SubmitForm({ username }: { username: string }) {
       return setMsg({ ok: false, text });
     }
     setMsg({ ok: true, text: "Record submitted." });
+    void reloadMine();
     setLevelId(null);
     setVideo("");
     setNote("");
@@ -76,7 +82,12 @@ function SubmitForm({ username }: { username: string }) {
       <form onSubmit={submit} className="card flex flex-col gap-4 p-5">
         <div>
           <label className="label">Level</label>
-          {levels.loading ? <div className="input text-muted">Loading…</div> : <LevelPicker levels={levels.data ?? []} value={levelId} onChange={setLevelId} />}
+          {levels.loading ? <div className="input text-muted">Loading…</div> : <LevelPicker levels={open} value={levelId} onChange={setLevelId} />}
+          {hidden > 0 && (
+            <p className="mt-1 text-xs text-neutral-500">
+              {hidden} level{hidden === 1 ? "" : "s"} you've completed or already submitted {hidden === 1 ? "is" : "are"} hidden.
+            </p>
+          )}
         </div>
         <div>
           <label className="label">Video link</label>

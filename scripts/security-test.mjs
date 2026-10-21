@@ -130,6 +130,23 @@ try {
     await check("banned moderator: add_level", "user", `select public.add_level('x','x','x',null,null,1)`, "deny", asRole("moderator", true));
     await check("admin: promote banned user", "owner", `select public.set_user_role(:U, 'moderator')`, "deny", asRole("player", true));
 
+    // ---- packs: List Moderator+ manage packs, only List Admin+ change bonus points
+    const pack = `insert into public.packs (name, color, bonus_points) values ('sectest pack', '#123456', 5); insert into public.pack_levels select max(id), ${L} from public.packs`;
+    const packId = `(select id from public.packs where name = 'sectest pack')`;
+    await check("anon: insert pack", "anon", `insert into public.packs (name) values ('x')`, "deny");
+    await check("player: update pack bonus directly", "user", `update public.packs set bonus_points = 9999`, "deny", asPlayer + "; " + pack);
+    await check("player: save_pack", "user", `select public.save_pack(null, 'x', '#ffffff', array[:L]::bigint[])`, "deny", asPlayer);
+    await check("helper: save_pack", "user", `select public.save_pack(null, 'x', '#ffffff', array[:L]::bigint[])`, "deny", asRole("helper"));
+    await check("moderator: save_pack", "user", `select public.save_pack(null, 'x', '#ffffff', array[:L]::bigint[])`, "allow", asRole("moderator"));
+    await check("moderator: new pack with bonus", "user", `select public.save_pack(null, 'x', '#ffffff', array[:L]::bigint[], 50)`, "deny", asRole("moderator"));
+    await check("moderator: change bonus", "user", `select public.save_pack(${packId}, 'sectest pack', '#123456', array[:L]::bigint[], 50)`, "deny", asRole("moderator") + "; " + pack);
+    await check("moderator: edit pack, keep bonus", "user", `select public.save_pack(${packId}, 'renamed', '#654321', array[:L]::bigint[], 5)`, "allow", asRole("moderator") + "; " + pack);
+    await check("moderator: bad color", "user", `select public.save_pack(null, 'x', 'red', array[:L]::bigint[])`, "deny", asRole("moderator"));
+    await check("moderator: empty pack", "user", `select public.save_pack(null, 'x', '#ffffff', array[]::bigint[])`, "deny", asRole("moderator"));
+    await check("moderator: delete_pack", "user", `select public.delete_pack(${packId})`, "allow", asRole("moderator") + "; " + pack);
+    await check("banned moderator: save_pack", "user", `select public.save_pack(null, 'x', '#ffffff', array[:L]::bigint[])`, "deny", asRole("moderator", true));
+    await check("admin: save_pack with bonus", "user", `select public.save_pack(null, 'x', '#ffffff', array[:L]::bigint[], 50)`, "allow", asRole("admin"));
+
     // ---- account identity & links
     await check("signup: email ≠ username (squat)", "postgres",
       `insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'kunakov@users.challengegrind.local', '{"username":"Attacker"}')`, "deny");

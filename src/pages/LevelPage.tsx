@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { ArrowLeft, Check, Copy, Users } from "lucide-react";
+import { ArrowLeft, Check, Copy, Package, Users } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
 import type { Level, Profile } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { formatDate } from "../lib/time";
 import { Empty, ErrorBox, Flag, Spinner, VideoEmbed, VideoLink } from "../components/ui";
+import { DoneCheck, PackBadge } from "../components/PackBadge";
+import { fetchLevelPacks, isPackDone, type Pack } from "../lib/packs";
+import { useMyCompletions } from "../lib/completions";
 
 type Victor = { id: number; video_url: string; reviewed_at: string | null; player: Pick<Profile, "username" | "country" | "banned"> };
 type LevelWithVerifier = Level & { verifier_profile: Pick<Profile, "username" | "country"> | null };
@@ -22,25 +25,26 @@ export default function LevelPage() {
         .maybeSingle(),
     ) as LevelWithVerifier | null;
     if (!level) return null;
-    const victors = (
-      must(
-        await supabase
-          .from("records")
-          .select("id, video_url, reviewed_at, player:profiles!records_player_id_fkey(username, country, banned)")
-          .eq("level_id", level.id)
-          .eq("status", "approved")
-          .order("reviewed_at"),
-      ) as unknown as Victor[]
-    ).filter((v) => !v.player.banned);
-    return { level, victors };
+    const [victorsRes, packs] = await Promise.all([
+      supabase
+        .from("records")
+        .select("id, video_url, reviewed_at, player:profiles!records_player_id_fkey(username, country, banned)")
+        .eq("level_id", level.id)
+        .eq("status", "approved")
+        .order("reviewed_at"),
+      fetchLevelPacks(level.id),
+    ]);
+    const victors = (must(victorsRes) as unknown as Victor[]).filter((v) => !v.player.banned);
+    return { level, victors, packs };
   }, [id]);
+  const { done } = useMyCompletions();
   const [copied, setCopied] = useState(false);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorBox message={error} />;
   if (!data) return <Empty>Level not found</Empty>;
 
-  const { level, victors } = data;
+  const { level, victors, packs } = data;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
@@ -51,7 +55,8 @@ export default function LevelPage() {
       <div>
         <div className="flex items-baseline gap-3">
           <span className={`text-2xl font-semibold tabular-nums ${level.position <= 3 ? "text-brand" : "text-neutral-500"}`}>#{level.position}</span>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{level.name}</h1>
+          <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-white sm:text-3xl">{level.name}</h1>
+          {done.has(level.id) && <DoneCheck className="self-center" title="You completed this level" />}
         </div>
         <p className="mt-1 text-sm text-muted">
           by <span className="text-neutral-200">{level.creator}</span> · verified by{" "}
@@ -65,6 +70,15 @@ export default function LevelPage() {
             </Link>
           )}
         </p>
+        {packs.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {packs.map((p) => (
+              <a key={p.id} href={`#pack-${p.id}`} className="max-w-full transition-opacity hover:opacity-80">
+                <PackBadge pack={p} done={isPackDone(p, done)} />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       <VideoEmbed url={level.video_url} title={level.name} />
@@ -95,6 +109,19 @@ export default function LevelPage() {
         </div>
       </div>
 
+      {packs.length > 0 && (
+        <section>
+          <h2 className="mb-2.5 text-sm font-medium text-muted">
+            {packs.length === 1 ? "Pack" : "Packs"} · {packs.length}
+          </h2>
+          <div className="flex flex-col gap-2.5">
+            {packs.map((p) => (
+              <PackCard key={p.id} pack={p} current={level.id} done={done} />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
         <h2 className="mb-2.5 text-sm font-medium text-muted">Records · {victors.length}</h2>
         {victors.length === 0 ? (
@@ -114,6 +141,43 @@ export default function LevelPage() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/** A pack the level belongs to: its levels (this one highlighted, completed ones checked) and the bonus */
+function PackCard({ pack, current, done }: { pack: Pack; current: number; done: ReadonlySet<number> }) {
+  const have = pack.levels.filter((l) => done.has(l.id)).length;
+  const complete = isPackDone(pack, done);
+  return (
+    <div id={`pack-${pack.id}`} className="card scroll-mt-20 overflow-hidden" style={{ borderColor: `${pack.color}59` }}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3" style={{ backgroundColor: `${pack.color}14` }}>
+        <Package className="h-4 w-4 shrink-0" style={{ color: pack.color }} />
+        <span className="min-w-0 flex-1 truncate font-medium text-white">{pack.name}</span>
+        {pack.bonus_points > 0 && <span className="text-sm tabular-nums text-neutral-300">+{formatPoints(pack.bonus_points)} pts</span>}
+        {done.size > 0 && (
+          <span className={`flex items-center gap-1 text-xs tabular-nums ${complete ? "text-emerald-400" : "text-muted"}`}>
+            {complete && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+            {have}/{pack.levels.length}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5 p-3">
+        {pack.levels.map((l) => (
+          <Link
+            key={l.id}
+            to={`/level/${l.id}`}
+            title={`#${l.position}`}
+            className={`flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm transition-colors ${
+              l.id === current ? "border-white/40 bg-white/5 text-white" : "border-line text-neutral-300 hover:border-neutral-600 hover:text-white"
+            }`}
+          >
+            <span className="tabular-nums text-muted">#{l.position}</span>
+            <span className="truncate">{l.name}</span>
+            {done.has(l.id) && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" strokeWidth={3} />}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

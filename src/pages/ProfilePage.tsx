@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router";
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { BadgeCheck, Ban, Settings, Trophy } from "lucide-react";
+import { BadgeCheck, Ban, Package, Settings, Trophy } from "lucide-react";
 import { supabase, errorText } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
 import { useAuth } from "../lib/auth";
@@ -9,9 +9,18 @@ import type { LeaderboardRow, Level, Profile, RecordRow } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { countryName } from "../lib/countries";
 import { formatDate, timeAgo } from "../lib/time";
+import { fetchPacks, isPackDone, type Pack } from "../lib/packs";
+import { PackBadge } from "../components/PackBadge";
 import { Empty, ErrorBox, Flag, RoleBadge, STATUS, SocialLinks, Spinner, VideoLink } from "../components/ui";
 
-type RecordWithLevel = RecordRow & { level: Pick<Level, "id" | "name" | "position"> };
+type LevelRef = Pick<Level, "id" | "name" | "position">;
+type RecordWithLevel = RecordRow & { level: LevelRef };
+
+/** Accepted records + verifications, each level once, hardest first */
+function mergeLevels(...lists: LevelRef[][]): LevelRef[] {
+  const byId = new Map(lists.flat().map((l) => [l.id, l]));
+  return [...byId.values()].sort((a, b) => a.position - b.position);
+}
 
 export default function ProfilePage() {
   const { username } = useParams();
@@ -24,37 +33,43 @@ export default function ProfilePage() {
     if (!profile) {
       // Player without an account (e.g. a verifier who hasn't registered yet)
       const name = username ?? "";
-      const [stats, verified] = await Promise.all([
+      const [stats, verified, packs] = await Promise.all([
         supabase.from("leaderboard").select("*").eq("registered", false).eq("username", name).maybeSingle(),
         supabase.from("levels").select("id, name, position").is("verifier_id", null).eq("verifier", name).order("position"),
+        fetchPacks(),
       ]);
       const guest = must(stats) as LeaderboardRow | null;
-      return guest ? { guest, verified: must(verified) as Pick<Level, "id" | "name" | "position">[] } : null;
+      return guest ? { guest, verified: must(verified) as LevelRef[], packs } : null;
     }
-    const [stats, records, verified] = await Promise.all([
+    const [stats, records, verified, packs] = await Promise.all([
       supabase.from("leaderboard").select("*").eq("id", profile.id).maybeSingle(),
       // RLS: others see only approved records; the owner (and staff) also see pending/rejected
       supabase.from("records").select("*, level:levels(id, name, position)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("levels").select("id, name, position").eq("verifier_id", profile.id).order("position"),
+      fetchPacks(),
     ]);
     return {
       profile,
       stats: must(stats) as LeaderboardRow | null,
       records: must(records) as unknown as RecordWithLevel[],
-      verified: must(verified) as Pick<Level, "id" | "name" | "position">[],
+      verified: must(verified) as LevelRef[],
+      packs,
     };
   }, [username]);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorBox message={error} />;
   if (!data) return <Empty>Player not found</Empty>;
-  if (data.guest) return <GuestProfile row={data.guest} verified={data.verified} />;
+  if (data.guest) return <GuestProfile row={data.guest} verified={data.verified} packs={data.packs} />;
 
-  const { profile, stats, records, verified } = data;
+  const { profile, stats, records, verified, packs } = data;
   const isMe = me?.id === profile.id;
-  const completed = records.filter((r) => r.status === "approved").sort((a, b) => a.level.position - b.level.position);
+  // Verifications count as completions too
+  const completed = mergeLevels(records.filter((r) => r.status === "approved").map((r) => r.level), verified);
   const submissions = records.filter((r) => r.status !== "approved");
-  const hardest = [...completed.map((r) => r.level), ...verified].sort((a, b) => a.position - b.position)[0];
+  const hardest = completed[0];
+  const done = new Set(completed.map((l) => l.id));
+  const donePacks = packs.filter((p) => isPackDone(p, done));
 
   async function withdraw(id: number) {
     if (!confirm("Withdraw this submission?")) return;
@@ -116,7 +131,7 @@ export default function ProfilePage() {
         )}
 
         <div className="mt-2.5 flex flex-col gap-2.5">
-          <LevelChips title="Completed levels" icon={<Trophy className="h-4 w-4 text-brand" />} levels={completed.map((r) => r.level)}>
+          <LevelChips title="Completed levels" icon={<Trophy className="h-4 w-4 text-brand" />} levels={completed}>
             {isMe ? (
               <>
                 You haven't completed any challenges yet.{" "}
@@ -128,7 +143,8 @@ export default function ProfilePage() {
               "No completed challenges yet"
             )}
           </LevelChips>
-          {verified.length > 0 && <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />}
+          {verified.length > 0 && <LevelChips title="Of which verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />}
+          <CompletedPacks packs={donePacks} bonus={stats?.pack_bonus ?? 0} />
         </div>
       </div>
 
@@ -172,8 +188,6 @@ export default function ProfilePage() {
   );
 }
 
-type LevelRef = Pick<Level, "id" | "name" | "position">;
-
 /** Box of level-name chips, hardest first; `children` is shown when the list is empty */
 function LevelChips({ title, icon, levels, verified, children }: { title: string; icon: ReactNode; levels: LevelRef[]; verified?: boolean; children?: ReactNode }) {
   return (
@@ -207,8 +221,29 @@ function LevelChips({ title, icon, levels, verified, children }: { title: string
   );
 }
 
-function GuestProfile({ row, verified }: { row: LeaderboardRow; verified: Pick<Level, "id" | "name" | "position">[] }) {
+/** Packs where the player has every level; hidden when there are none */
+function CompletedPacks({ packs, bonus }: { packs: Pack[]; bonus: number }) {
+  if (!packs.length) return null;
+  return (
+    <section className="rounded-lg border border-line bg-surface-2 p-3">
+      <h2 className="mb-2.5 flex items-center gap-2 text-sm font-medium text-white">
+        <Package className="h-4 w-4 text-brand" />
+        <span className="flex-1">Completed packs</span>
+        {bonus > 0 && <span className="text-xs tabular-nums text-muted">+{formatPoints(bonus)} pts</span>}
+        <span className="rounded-md bg-surface-3 px-1.5 text-xs tabular-nums text-muted">{packs.length}</span>
+      </h2>
+      <div className="flex flex-wrap gap-1.5">
+        {packs.map((p) => (
+          <PackBadge key={p.id} pack={p} done showBonus />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GuestProfile({ row, verified, packs }: { row: LeaderboardRow; verified: LevelRef[]; packs: Pack[] }) {
   const hardest = verified[0];
+  const done = new Set(verified.map((l) => l.id));
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mx-auto flex max-w-3xl flex-col gap-4">
       <div className="card p-5 sm:p-6">
@@ -221,7 +256,7 @@ function GuestProfile({ row, verified }: { row: LeaderboardRow; verified: Pick<L
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <Stat label="Rank" value={`#${row.rank}`} />
           <Stat label="Points" value={formatPoints(row.points)} />
-          <Stat label="Completed" value="0" />
+          <Stat label="Completed" value={String(verified.length)} />
           <Stat label="Verifications" value={String(row.verifications)} />
         </div>
         {hardest && (
@@ -235,11 +270,13 @@ function GuestProfile({ row, verified }: { row: LeaderboardRow; verified: Pick<L
             <span className="text-sm tabular-nums text-muted">{formatPoints(levelPoints(hardest.position))}</span>
           </Link>
         )}
-        {verified.length > 0 && (
-          <div className="mt-2.5">
-            <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />
-          </div>
-        )}
+        <div className="mt-2.5 flex flex-col gap-2.5">
+          {/* Players without an account only have verifications, so one box says it all */}
+          <LevelChips title="Completed levels (verified)" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified>
+            No completed challenges yet
+          </LevelChips>
+          <CompletedPacks packs={packs.filter((p) => isPackDone(p, done))} bonus={row.pack_bonus} />
+        </div>
       </div>
     </motion.div>
   );
