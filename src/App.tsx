@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import ListPage from "./pages/ListPage";
 import LevelPage from "./pages/LevelPage";
 import StatsPage from "./pages/StatsPage";
+import PacksPage from "./pages/PacksPage";
 import ProfilePage from "./pages/ProfilePage";
 import ChangelogPage from "./pages/ChangelogPage";
 import SubmitPage from "./pages/SubmitPage";
@@ -21,6 +22,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route index element={<ListPage />} />
             <Route path="level/:id" element={<LevelPage />} />
+            <Route path="packs" element={<PacksPage />} />
             <Route path="stats" element={<StatsPage />} />
             <Route path="player/:username" element={<ProfilePage />} />
             <Route path="changelog" element={<ChangelogPage />} />

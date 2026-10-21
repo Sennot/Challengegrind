@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Check, Package, Pencil, Plus, Save, Search, Trash2, X } from "lucide-react";
 import { supabase, errorText } from "../../lib/supabase";
 import { must, useAsync } from "../../lib/useAsync";
-import { useAuth } from "../../lib/auth";
 import { fetchPacks, PACK_COLORS, type Pack, type PackLevel } from "../../lib/packs";
 import { formatPoints } from "../../lib/points";
 import { Empty, ErrorBox, Spinner } from "../../components/ui";
@@ -11,9 +10,8 @@ import { PackBadge } from "../../components/PackBadge";
 type Draft = { id: number | null; name: string; color: string; bonus: string; levels: number[] };
 const NEW: Draft = { id: null, name: "", color: PACK_COLORS[0], bonus: "0", levels: [] };
 
-/** List Moderator+: packs (name, color, levels). Bonus points: List Admin+ only (also enforced in save_pack). */
+/** List Moderator+: packs (name, color, levels, bonus points) */
 export default function PacksTab() {
-  const { rank } = useAuth();
   const { data, loading, error, reload } = useAsync(async () => {
     const [packs, levels] = await Promise.all([
       fetchPacks(),
@@ -42,7 +40,6 @@ export default function PacksTab() {
         <PackEditor
           draft={draft}
           levels={data.levels}
-          canBonus={rank >= 3}
           onCancel={() => setDraft(null)}
           onSaved={() => {
             setDraft(null);
@@ -65,7 +62,6 @@ export default function PacksTab() {
                 key={p.id}
                 draft={draft}
                 levels={data.levels}
-                canBonus={rank >= 3}
                 onCancel={() => setDraft(null)}
                 onSaved={() => {
                   setDraft(null);
@@ -108,13 +104,11 @@ export default function PacksTab() {
 function PackEditor({
   draft: initial,
   levels,
-  canBonus,
   onCancel,
   onSaved,
 }: {
   draft: Draft;
   levels: PackLevel[];
-  canBonus: boolean;
   onCancel: () => void;
   onSaved: () => void;
 }) {
@@ -141,15 +135,14 @@ function PackEditor({
     if (!/^#[0-9a-fA-F]{6}$/.test(d.color)) return setErr("Pick a color");
     if (!d.levels.length) return setErr("Add at least one level");
     if (d.levels.length > 100) return setErr("A pack can have up to 100 levels");
-    if (canBonus && (!Number.isFinite(bonus) || bonus < 0 || bonus > 10000)) return setErr("Bonus: 0–10000 points");
+    if (!Number.isFinite(bonus) || bonus < 0 || bonus > 10000) return setErr("Bonus: 0–10000 points");
     setBusy(true);
     const { error } = await supabase.rpc("save_pack", {
       p_id: d.id,
       p_name: name,
       p_color: d.color.toLowerCase(),
       p_level_ids: d.levels,
-      // null keeps the current bonus; only List Admin+ may change it
-      p_bonus: canBonus ? Math.round(bonus * 100) / 100 : null,
+      p_bonus: Math.round(bonus * 100) / 100,
     });
     setBusy(false);
     if (error) return setErr(error.message.includes("packs_name_lower_idx") ? "A pack with this name already exists" : errorText(error));
@@ -180,11 +173,8 @@ function PackEditor({
             step="0.01"
             inputMode="decimal"
             value={d.bonus}
-            disabled={!canBonus}
-            title={canBonus ? undefined : "Only List Admin+ can set bonus points"}
             onChange={(e) => setD({ ...d, bonus: e.target.value })}
           />
-          {!canBonus && <p className="mt-1 text-xs text-neutral-500">Set by List Admin+</p>}
         </div>
       </div>
 
