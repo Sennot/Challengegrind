@@ -44,7 +44,6 @@ function SubmitForm({ username }: { username: string }) {
   // Completed (accepted or verified) and pending levels can't take another record
   const { done, pending, reload: reloadMine } = useMyCompletions();
   const open = (levels.data ?? []).filter((l) => !done.has(l.id) && !pending.has(l.id));
-  const hidden = (levels.data?.length ?? 0) - open.length;
 
   const [levelId, setLevelId] = useState<number | null>(null);
   const [video, setVideo] = useState("");
@@ -83,11 +82,6 @@ function SubmitForm({ username }: { username: string }) {
         <div>
           <label className="label">Level</label>
           {levels.loading ? <div className="input text-muted">Loading…</div> : <LevelPicker levels={open} value={levelId} onChange={setLevelId} />}
-          {hidden > 0 && (
-            <p className="mt-1 text-xs text-neutral-500">
-              {hidden} level{hidden === 1 ? "" : "s"} you've completed or already submitted {hidden === 1 ? "is" : "are"} hidden.
-            </p>
-          )}
         </div>
         <div>
           <label className="label">Video link</label>

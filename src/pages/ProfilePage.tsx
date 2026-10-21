@@ -143,7 +143,7 @@ export default function ProfilePage() {
               "No completed challenges yet"
             )}
           </LevelChips>
-          {verified.length > 0 && <LevelChips title="Of which verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />}
+          {verified.length > 0 && <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />}
           <CompletedPacks packs={donePacks} bonus={stats?.pack_bonus ?? 0} />
         </div>
       </div>
@@ -272,7 +272,7 @@ function GuestProfile({ row, verified, packs }: { row: LeaderboardRow; verified:
         )}
         <div className="mt-2.5 flex flex-col gap-2.5">
           {/* Players without an account only have verifications, so one box says it all */}
-          <LevelChips title="Completed levels (verified)" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified>
+          <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified>
             No completed challenges yet
           </LevelChips>
           <CompletedPacks packs={packs.filter((p) => isPackDone(p, done))} bonus={row.pack_bonus} />
