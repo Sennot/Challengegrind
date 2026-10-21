@@ -63,7 +63,7 @@ function SubmitForm({ username }: { username: string }) {
       const text = error.message.includes("records_one_active_idx")
         ? "You already have a record on this level (pending or accepted)"
         : error.message.includes("too many pending")
-          ? "Too many pending records (max 5)"
+          ? "Too many pending records (max 10)"
           : errorText(error);
       return setMsg({ ok: false, text });
     }
