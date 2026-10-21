@@ -5,7 +5,6 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { KeyRound, LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { TURNSTILE_SITE_KEY, USERNAME_RE } from "../lib/supabase";
-import { useList } from "../lib/list";
 
 function AuthCard({ title, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -30,7 +29,6 @@ function Captcha({ onToken }: { onToken: (t: string) => void }) {
 }
 
 export function LoginPage() {
-  const { path } = useList();
   const { signIn, session } = useAuth();
   const nav = useNavigate();
   const [username, setUsername] = useState("");
@@ -39,7 +37,7 @@ export function LoginPage() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (session) return <Navigate to={path("/")} replace />;
+  if (session) return <Navigate to="/" replace />;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -47,7 +45,7 @@ export function LoginPage() {
     setBusy(true);
     try {
       await signIn(username, password, captcha);
-      nav(path("/"));
+      nav("/");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -71,7 +69,7 @@ export function LoginPage() {
         <button className="btn-primary" disabled={busy}>{busy ? "Logging in…" : "Log in"}</button>
         <p className="text-center text-sm text-muted">
           No account?{" "}
-          <Link to={path("/register")} className="text-white hover:underline">Sign up</Link>
+          <Link to="/register" className="text-white hover:underline">Sign up</Link>
         </p>
         <p className="flex items-start gap-2 text-xs text-neutral-500">
           <KeyRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -83,7 +81,6 @@ export function LoginPage() {
 }
 
 export function RegisterPage() {
-  const { path } = useList();
   const { signUp, session } = useAuth();
   const nav = useNavigate();
   const [username, setUsername] = useState("");
@@ -93,7 +90,7 @@ export function RegisterPage() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (session) return <Navigate to={path("/")} replace />;
+  if (session) return <Navigate to="/" replace />;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -104,7 +101,7 @@ export function RegisterPage() {
     setBusy(true);
     try {
       await signUp(username, password, captcha);
-      nav(path("/settings"));
+      nav("/settings");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -132,7 +129,7 @@ export function RegisterPage() {
         <button className="btn-primary" disabled={busy}>{busy ? "Creating…" : "Create account"}</button>
         <p className="text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link to={path("/login")} className="text-white hover:underline">Log in</Link>
+          <Link to="/login" className="text-white hover:underline">Log in</Link>
         </p>
       </form>
     </AuthCard>

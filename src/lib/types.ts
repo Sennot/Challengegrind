@@ -1,5 +1,3 @@
-import type { ListKind } from "./list";
-
 export type Role = "player" | "helper" | "moderator" | "admin" | "owner";
 export type RecordStatus = "pending" | "approved" | "rejected";
 
@@ -31,9 +29,6 @@ export interface Level {
   video_url: string | null;
   /** e.g. "240", "CBF" */
   fps: string | null;
-  /** click method on the SCL, e.g. "Alternating" */
-  method: string | null;
-  list: ListKind;
   position: number;
   created_at: string;
 }
@@ -41,7 +36,6 @@ export interface Level {
 export interface ChangelogEntry {
   id: number;
   kind: "added" | "moved" | "removed";
-  list: ListKind;
   level_id: number | null;
   level_name: string;
   old_position: number | null;
@@ -57,9 +51,6 @@ export interface RecordRow {
   player_id: string;
   video_url: string;
   note: string | null;
-  /** SCL only */
-  fps: string | null;
-  method: string | null;
   status: RecordStatus;
   review_note: string | null;
   created_at: string;
@@ -78,7 +69,6 @@ export interface LeaderboardRow {
   hardest_name: string;
   rank: number;
   registered: boolean;
-  list: ListKind;
 }
 
 export interface LevelSubmission {
@@ -87,9 +77,6 @@ export interface LevelSubmission {
   gd_id: number;
   /** e.g. "240", "CBF" */
   fps: string;
-  /** SCL only */
-  method: string | null;
-  list: ListKind;
   name: string;
   creator: string;
   /** account that uploaded the level */

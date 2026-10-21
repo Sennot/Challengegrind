@@ -4,25 +4,20 @@ import { supabase, errorText } from "../../lib/supabase";
 import { must, useAsync } from "../../lib/useAsync";
 import type { Level } from "../../lib/types";
 import { isHttpsUrl } from "../../lib/video";
-import type { ListKind } from "../../lib/list";
-import MethodInput from "../../components/MethodInput";
 import { ErrorBox, PositionBadge, Spinner } from "../../components/ui";
 
-export type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string; fps: string; method: string };
-export const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "", fps: "", method: "" };
+export type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string; fps: string };
+export const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "", fps: "" };
 
-/** `list` = SCL also requires FPS and method */
-export function validate(d: Draft, list: ListKind): string | null {
+export function validate(d: Draft): string | null {
   if (!d.name.trim() || !d.creator.trim() || !d.verifier.trim()) return "Fill in name, creator and verifier";
   if (d.gd_id && !/^\d+$/.test(d.gd_id)) return "Level ID must be digits only";
   if (d.video_url && !isHttpsUrl(d.video_url)) return "Video must be an https:// link";
   if (d.fps && !/^[A-Za-z0-9 /+.-]{1,20}$/.test(d.fps.trim())) return "FPS: e.g. 240 or CBF";
-  if (list === "scl" && (!d.fps.trim() || !d.method.trim())) return "Spam challenges need FPS and method";
-  if (d.method.trim().length > 40) return "Method: up to 40 characters";
   return null;
 }
 
-export function DraftFields({ d, set, list }: { d: Draft; set: (d: Draft) => void; list: ListKind }) {
+export function DraftFields({ d, set }: { d: Draft; set: (d: Draft) => void }) {
   const f = (k: keyof Draft, label: string, ph = "") => (
     <div>
       <label className="label">{label}</label>
@@ -36,19 +31,13 @@ export function DraftFields({ d, set, list }: { d: Draft; set: (d: Draft) => voi
       {f("verifier", "Verifier")}
       {f("gd_id", "Level ID", "optional")}
       {f("fps", "FPS", "FPS or CBF")}
-      {list === "scl" && (
-        <div>
-          <label className="label">Method</label>
-          <MethodInput value={d.method} onChange={(method) => set({ ...d, method })} />
-        </div>
-      )}
       <div>{f("video_url", "Verification video", "https://youtu.be/…")}</div>
     </div>
   );
 }
 
-export default function LevelsTab({ list }: { list: ListKind }) {
-  const { data, loading, error, reload } = useAsync(async () => must(await supabase.from("levels").select("*").eq("list", list).order("position")) as Level[], [list]);
+export default function LevelsTab() {
+  const { data, loading, error, reload } = useAsync(async () => must(await supabase.from("levels").select("*").order("position")) as Level[], []);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [pos, setPos] = useState("");
   const [msg, setMsg] = useState("");
@@ -58,7 +47,7 @@ export default function LevelsTab({ list }: { list: ListKind }) {
 
   async function add(e: FormEvent) {
     e.preventDefault();
-    const v = validate(draft, list);
+    const v = validate(draft);
     if (v) return setMsg(v);
     const position = pos ? Number(pos) : total + 1;
     const { error } = await supabase.rpc("add_level", {
@@ -69,8 +58,6 @@ export default function LevelsTab({ list }: { list: ListKind }) {
       p_video_url: draft.video_url || null,
       p_position: position,
       p_fps: draft.fps.trim() || null,
-      p_list: list,
-      p_method: draft.method.trim() || null,
     });
     if (error) return setMsg(errorText(error));
     setMsg(`"${draft.name}" added at #${position}`);
@@ -95,7 +82,7 @@ export default function LevelsTab({ list }: { list: ListKind }) {
   }
 
   async function saveEdit(id: number) {
-    const v = validate(editDraft, list);
+    const v = validate(editDraft);
     if (v) return alert(v);
     const { error } = await supabase
       .from("levels")
@@ -106,7 +93,6 @@ export default function LevelsTab({ list }: { list: ListKind }) {
         gd_id: editDraft.gd_id ? Number(editDraft.gd_id) : null,
         video_url: editDraft.video_url.trim() || null,
         fps: editDraft.fps.trim() || null,
-        method: editDraft.method.trim() || null,
       })
       .eq("id", id);
     if (error) return alert(errorText(error));
@@ -118,9 +104,9 @@ export default function LevelsTab({ list }: { list: ListKind }) {
     <div className="flex flex-col gap-6">
       <form onSubmit={add} className="card flex flex-col gap-4 p-5">
         <h2 className="flex items-center gap-2 font-bold">
-          <Plus className="h-4 w-4 text-brand" /> Add level to the {list === "scl" ? "SCL" : "CL"}
+          <Plus className="h-4 w-4 text-brand" /> Add level
         </h2>
-        <DraftFields d={draft} set={setDraft} list={list} />
+        <DraftFields d={draft} set={setDraft} />
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-40">
             <label className="label">Position</label>
@@ -142,7 +128,7 @@ export default function LevelsTab({ list }: { list: ListKind }) {
           {data?.map((l) =>
             editing === l.id ? (
               <div key={l.id} className="card flex flex-col gap-3 border-brand/40 p-4">
-                <DraftFields d={editDraft} set={setEditDraft} list={list} />
+                <DraftFields d={editDraft} set={setEditDraft} />
                 <div className="flex gap-2">
                   <button className="btn-primary" onClick={() => saveEdit(l.id)}>
                     <Save className="h-4 w-4" /> Save
@@ -159,8 +145,6 @@ export default function LevelsTab({ list }: { list: ListKind }) {
                   <div className="truncate font-semibold">{l.name}</div>
                   <div className="truncate text-xs text-muted">
                     {l.creator} · verifier {l.verifier}
-                    {l.fps && ` · ${l.fps}`}
-                    {l.method && ` · ${l.method}`}
                   </div>
                 </div>
                 <div className="flex gap-1.5">
@@ -172,7 +156,7 @@ export default function LevelsTab({ list }: { list: ListKind }) {
                     title="Edit"
                     onClick={() => {
                       setEditing(l.id);
-                      setEditDraft({ name: l.name, creator: l.creator, verifier: l.verifier, gd_id: l.gd_id ? String(l.gd_id) : "", video_url: l.video_url ?? "", fps: l.fps ?? "", method: l.method ?? "" });
+                      setEditDraft({ name: l.name, creator: l.creator, verifier: l.verifier, gd_id: l.gd_id ? String(l.gd_id) : "", video_url: l.video_url ?? "", fps: l.fps ?? "" });
                     }}
                   >
                     <Pencil className="h-4 w-4" />

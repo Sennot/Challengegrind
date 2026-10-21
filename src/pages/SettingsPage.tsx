@@ -5,7 +5,6 @@ import { supabase, errorText } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { COUNTRIES } from "../lib/countries";
 import { BrandIcon, ErrorBox, Flag, PageHeader, Spinner, type Brand } from "../components/ui";
-import { useList } from "../lib/list";
 
 type SocialForm = { telegram: string; discord: string; youtube: string; twitch: string };
 
@@ -17,7 +16,6 @@ const SOCIAL_FIELDS: { key: keyof SocialForm; brand: Brand; label: string; ph: s
 ];
 
 export default function SettingsPage() {
-  const { path } = useList();
   const { profile, loading, refreshProfile } = useAuth();
   const [country, setCountry] = useState("");
   const [bio, setBio] = useState("");
@@ -40,7 +38,7 @@ export default function SettingsPage() {
   }, [profile]);
 
   if (loading) return <Spinner />;
-  if (!profile) return <Navigate to={path("/login")} replace />;
+  if (!profile) return <Navigate to="/login" replace />;
   if (profile.banned) return <ErrorBox message="Your account is banned — profile editing is disabled." />;
 
   async function saveProfile(e: FormEvent) {
