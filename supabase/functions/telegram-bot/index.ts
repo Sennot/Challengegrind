@@ -117,23 +117,46 @@ async function account(tgUser: number) {
 type Level = { id: number; name: string; creator: string; verifier: string; position: number; fps: string | null; gd_id: number | null; video_url: string | null };
 const LEVEL_COLS = "id, name, creator, verifier, position, fps, gd_id, video_url";
 
-async function levelCard(l: Level) {
-  const [{ data: rec }, { data: pl }] = await Promise.all([
+/** Levels the linked account has (accepted records + verifications); empty for strangers */
+async function doneLevels(tgUser?: number): Promise<Set<number>> {
+  if (!tgUser) return new Set();
+  const { data: link } = await db.from("telegram_links").select("user_id").eq("tg_user_id", tgUser).maybeSingle();
+  if (!link) return new Set();
+  const [{ data: rec }, { data: ver }] = await Promise.all([
+    db.from("records").select("level_id").eq("player_id", link.user_id).eq("status", "approved"),
+    db.from("levels").select("id").eq("verifier_id", link.user_id),
+  ]);
+  return new Set([...(rec ?? []).map((r: Json) => Number(r.level_id)), ...(ver ?? []).map((l: Json) => Number(l.id))]);
+}
+
+/** ▰▰▰▱▱ */
+const bar = (n: number, total: number, width = 10) => {
+  const full = total ? Math.round((n / total) * width) : 0;
+  return "▰".repeat(full) + "▱".repeat(width - full);
+};
+const MEDAL = ["🥇", "🥈", "🥉"];
+const padL = (s: string | number, n: number) => String(s).padStart(n, " ");
+
+async function levelCard(l: Level, viewer?: number) {
+  const [{ data: rec }, { data: pl }, done] = await Promise.all([
     db.from("records").select("player:profiles!records_player_id_fkey(banned)").eq("level_id", l.id).eq("status", "approved"),
     db.from("pack_levels").select("pack:packs(name)").eq("level_id", l.id),
+    doneLevels(viewer),
   ]);
   const victors = (rec ?? []).filter((r: Json) => !r.player?.banned).length;
   const packs = (pl ?? []).map((p: Json) => p.pack?.name).filter(Boolean);
-  const lines = [
-    `<b>#${l.position} · ${esc(l.name)}</b>`,
-    `by ${esc(l.creator)}`,
-    `Verified by ${esc(l.verifier)}`,
-    "",
-    `🏆 ${fmt(points(l.position))} points`,
+  const stats = [
+    `🏆 <b>${fmt(points(l.position))}</b> points`,
     l.fps ? `🎮 ${esc(fpsLabel(l.fps))}` : null,
-    `✅ ${victors} victor${victors === 1 ? "" : "s"}`,
+    `👥 ${victors} victor${victors === 1 ? "" : "s"}`,
     packs.length ? `📦 ${packs.map(esc).join(", ")}` : null,
     l.gd_id ? `🆔 <code>${l.gd_id}</code>` : null,
+  ].filter((x) => x !== null);
+  const lines = [
+    `${MEDAL[l.position - 1] ?? "🔹"} <b>#${l.position} · ${esc(l.name)}</b>`,
+    `<i>by ${esc(l.creator)} · verified by ${esc(l.verifier)}</i>`,
+    `<blockquote>${stats.join("\n")}</blockquote>`,
+    done.has(Number(l.id)) ? "✅ <b>You completed this level</b>" : null,
   ].filter((x) => x !== null);
   const row = [btn("🌐 Open on site", `${SITE}/level/${l.id}`)];
   if (l.video_url) row.push(btn("▶️ Video", l.video_url));
@@ -147,14 +170,19 @@ async function playerCard(name: string) {
     : await db.from("leaderboard").select("*").eq("registered", false).eq("username", name).maybeSingle();
   if (!p && !row) return null;
   const username = p?.username ?? row.username;
+  const stats = row
+    ? [
+        `🏅 Rank <b>#${row.rank}</b> · <b>${fmt(row.points)}</b> points`,
+        `✅ ${row.completions} completed${row.verifications ? ` · ${row.verifications} verified` : ""}`,
+        row.hardest_name ? `💀 Hardest: #${row.hardest_position} ${esc(row.hardest_name)}` : null,
+        row.packs_completed ? `📦 ${row.packs_completed} pack${row.packs_completed === 1 ? "" : "s"} · +${fmt(row.pack_bonus)} bonus` : null,
+      ].filter((x) => x !== null)
+    : ["No points yet"];
   const lines = [
-    `${flag(p?.country)} <b>${esc(username)}</b>${p && p.role !== "player" ? ` · ${ROLE_LABEL[p.role]}` : ""}${p ? "" : " · no account"}`,
-    p?.banned ? "⛔ Banned" : null,
-    row ? `🏅 Rank #${row.rank} · ${fmt(row.points)} points` : "🏅 No points yet",
-    row ? `✅ ${row.completions} completed${row.verifications ? ` (${row.verifications} verified)` : ""}` : null,
-    row?.hardest_name ? `💀 Hardest: #${row.hardest_position} ${esc(row.hardest_name)}` : null,
-    row?.packs_completed ? `📦 ${row.packs_completed} pack${row.packs_completed === 1 ? "" : "s"} completed (+${fmt(row.pack_bonus)})` : null,
-  ].filter((x) => x !== null);
+    `${flag(p?.country)} <b>${esc(username)}</b>${row && MEDAL[row.rank - 1] ? ` ${MEDAL[row.rank - 1]}` : ""}`,
+    `<i>${p ? ROLE_LABEL[p.role] : "No account yet"}${p?.banned ? " · banned" : ""}</i>`,
+    `<blockquote>${stats.join("\n")}</blockquote>`,
+  ];
   return {
     text: lines.join("\n"),
     parse_mode: "HTML",
@@ -163,16 +191,75 @@ async function playerCard(name: string) {
   };
 }
 
-async function packCard(id: number) {
-  const { data: p } = await db.from("packs").select("id, name, bonus_points, pack_levels(level:levels(id, name, position))").eq("id", id).maybeSingle();
+async function packCard(id: number, viewer?: number) {
+  const [{ data: p }, done] = await Promise.all([
+    db.from("packs").select("id, name, bonus_points, pack_levels(level:levels(id, name, position))").eq("id", id).maybeSingle(),
+    doneLevels(viewer),
+  ]);
   if (!p) return null;
   const levels = (p.pack_levels ?? []).map((x: Json) => x.level).filter(Boolean).sort((a: Json, b: Json) => a.position - b.position);
+  const have = levels.filter((l: Json) => done.has(Number(l.id))).length;
+  const mark = (l: Json) => (done.size && done.has(Number(l.id)) ? "✅" : "▫️");
   const lines = [
-    `📦 <b>${esc(p.name)}</b>${Number(p.bonus_points) > 0 ? ` · +${fmt(p.bonus_points)} bonus points` : ""}`,
-    `${levels.length} level${levels.length === 1 ? "" : "s"}:`,
-    ...levels.map((l: Json) => `#${l.position} <a href="${SITE}/level/${l.id}">${esc(l.name)}</a>`),
-  ];
+    `📦 <b>${esc(p.name)}</b>`,
+    `<i>${levels.length} level${levels.length === 1 ? "" : "s"}${Number(p.bonus_points) > 0 ? ` · +${fmt(p.bonus_points)} bonus points` : ""}</i>`,
+    "",
+    ...levels.map((l: Json) => `${mark(l)} <code>#${padL(l.position, 2)}</code> <a href="${SITE}/level/${l.id}">${esc(l.name)}</a>`),
+    done.size ? `\n${bar(have, levels.length)} <b>${have}/${levels.length}</b>${have === levels.length && levels.length ? " · completed! 🎉" : ""}` : null,
+  ].filter((x) => x !== null);
   return { text: lines.join("\n"), parse_mode: "HTML", link_preview_options: { is_disabled: true }, reply_markup: { inline_keyboard: [[btn("🌐 All packs", `${SITE}/packs`)]] } };
+}
+
+const TOP_PAGE = 10;
+const pager = (prefix: string, page: number, pages: number) => {
+  if (pages <= 1) return [];
+  return [[
+    ...(page > 0 ? [cb("◀️", `${prefix}:${page - 1}`)] : []),
+    cb(`${page + 1} / ${pages}`, "noop"),
+    ...(page < pages - 1 ? [cb("▶️", `${prefix}:${page + 1}`)] : []),
+  ]];
+};
+
+/** Top levels, TOP_PAGE per page: aligned position + points, medals for the top 3 */
+async function topPage(page: number) {
+  const { count } = await db.from("levels").select("id", { count: "exact", head: true });
+  const pages = Math.max(1, Math.ceil((count ?? 0) / TOP_PAGE));
+  page = Math.min(Math.max(page, 0), pages - 1);
+  const { data } = await db.from("levels").select("id, name, position").order("position").range(page * TOP_PAGE, page * TOP_PAGE + TOP_PAGE - 1);
+  if (!data?.length) return { text: "The list is empty." };
+  const lines = data.map(
+    (l: Json) => `<code>${padL(l.position, 3)} │ ${padL(fmt(points(l.position)), 6)}</code>  <a href="${SITE}/level/${l.id}">${esc(l.name)}</a>${MEDAL[l.position - 1] ? ` ${MEDAL[l.position - 1]}` : ""}`,
+  );
+  return {
+    text: `🏆 <b>Top levels</b> · #${data[0].position}–${data[data.length - 1].position} of ${count}\n\n${lines.join("\n")}`,
+    parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
+    reply_markup: { inline_keyboard: [...pager("tp", page, pages), [btn("🌐 Full list", SITE)]] },
+  };
+}
+
+/** Top players, TOP_PAGE per page */
+async function playersPage(page: number) {
+  const { count } = await db.from("leaderboard").select("username", { count: "exact", head: true });
+  const pages = Math.max(1, Math.ceil((count ?? 0) / TOP_PAGE));
+  page = Math.min(Math.max(page, 0), pages - 1);
+  const { data } = await db
+    .from("leaderboard")
+    .select("username, country, points, rank")
+    .order("rank")
+    .order("username")
+    .range(page * TOP_PAGE, page * TOP_PAGE + TOP_PAGE - 1);
+  if (!data?.length) return { text: "No players with points yet." };
+  const lines = data.map(
+    (p: Json) =>
+      `<code>${padL(p.rank, 3)} │ ${padL(fmt(p.points), 7)}</code>  ${flag(p.country)} <a href="${SITE}/player/${encodeURIComponent(p.username)}">${esc(p.username)}</a>${MEDAL[p.rank - 1] ? ` ${MEDAL[p.rank - 1]}` : ""}`,
+  );
+  return {
+    text: `🏅 <b>Top players</b> · page ${page + 1} of ${pages}\n\n${lines.join("\n")}`,
+    parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
+    reply_markup: { inline_keyboard: [...pager("pp", page, pages), [btn("🌐 Stats Viewer", `${SITE}/stats`)]] },
+  };
 }
 
 /** "#5" → position, big numbers → GD level id, otherwise exact name, then partial name */
@@ -221,10 +308,10 @@ async function searchPage(q: string, page: number) {
 const HELP = [
   "<b>ChallengeGrind bot</b>",
   "",
-  "/top [n] — top levels",
+  "/top [page] — top levels",
   "/level &lt;name | #position | level id&gt; — level card",
   "/search &lt;text&gt; — find levels by name or creator",
-  "/players [n] — top players",
+  "/players [page] — top players",
   "/player &lt;nickname&gt; — player stats",
   "/packs — all packs · /pack &lt;name&gt; — one pack",
   "/random — a random level",
@@ -331,18 +418,14 @@ async function command(name: string, arg: string, c: Ctx) {
       return say(on ? "🔔 Notifications are on." : "🔕 Notifications are off. /notify on to turn them back on.");
     }
 
-    case "top": {
-      const n = Math.min(Math.max(Number(arg) || 10, 1), 30);
-      const { data } = await db.from("levels").select("id, name, position").order("position").limit(n);
-      if (!data?.length) return say("The list is empty.");
-      const lines = data.map((l: Json) => `<b>#${l.position}</b> <a href="${SITE}/level/${l.id}">${esc(l.name)}</a> — ${fmt(points(l.position))}`);
-      return say(`🏆 <b>Top ${data.length} levels</b>\n\n${lines.join("\n")}`, { reply_markup: { inline_keyboard: [[btn("🌐 Full list", SITE)]] } });
-    }
+    case "top":
+      // /top or /top 3 (page number)
+      return reply(await topPage((Number(arg) || 1) - 1));
     case "level": {
       if (!arg) return say("Usage: /level &lt;name | #position | level id&gt;");
       const found = await findLevels(arg);
       if (!found.length) return say(`No level matches “${esc(arg)}”. Try /search ${esc(arg)}`);
-      if (found.length === 1) return reply(await levelCard(found[0]));
+      if (found.length === 1) return reply(await levelCard(found[0], from.id));
       // several levels share the name → let the user pick
       const rows = found.slice(0, PAGE).map((l) => [cb(`#${l.position} ${l.name} — ${l.creator}`.slice(0, 60), `lv:${l.id}`)]);
       return say(`Several levels match “${esc(arg)}” — pick one:${found.length > PAGE ? `\n(showing the first ${PAGE}, use /search for more)` : ""}`, {
@@ -357,15 +440,10 @@ async function command(name: string, arg: string, c: Ctx) {
       const { count } = await db.from("levels").select("id", { count: "exact", head: true });
       if (!count) return say("The list is empty.");
       const { data } = await db.from("levels").select(LEVEL_COLS).eq("position", 1 + Math.floor(Math.random() * count)).maybeSingle();
-      return data ? reply(await levelCard(data as Level)) : say("Try again.");
+      return data ? reply(await levelCard(data as Level, from.id)) : say("Try again.");
     }
-    case "players": {
-      const n = Math.min(Math.max(Number(arg) || 10, 1), 30);
-      const { data } = await db.from("leaderboard").select("id, username, country, points, rank, registered").order("rank").limit(n);
-      if (!data?.length) return say("No players with points yet.");
-      const lines = data.map((p: Json) => `<b>${p.rank}.</b> ${flag(p.country)} <a href="${SITE}/player/${encodeURIComponent(p.username)}">${esc(p.username)}</a> — ${fmt(p.points)}`);
-      return say(`🏅 <b>Top ${data.length} players</b>\n\n${lines.join("\n")}`, { reply_markup: { inline_keyboard: [[btn("🌐 Stats Viewer", `${SITE}/stats`)]] } });
-    }
+    case "players":
+      return reply(await playersPage((Number(arg) || 1) - 1));
     case "player": {
       if (!arg) {
         const acc = await account(from.id);
@@ -387,7 +465,7 @@ async function command(name: string, arg: string, c: Ctx) {
       const { data } = await db.from("packs").select("id, name").ilike("name", `%${like(arg)}%`).order("created_at").limit(10);
       if (!data?.length) return say(`No pack matches “${esc(arg)}”.`);
       const exact = data.find((p: Json) => p.name.toLowerCase() === arg.toLowerCase());
-      if (exact || data.length === 1) return reply((await packCard((exact ?? data[0]).id))!);
+      if (exact || data.length === 1) return reply((await packCard((exact ?? data[0]).id, from.id))!);
       return say("Several packs match — pick one:", { reply_markup: { inline_keyboard: data.map((p: Json) => [cb(`📦 ${p.name}`.slice(0, 60), `pk:${p.id}`)]) } });
     }
     case "setstaff": {
@@ -441,15 +519,20 @@ async function onCallback(q: Json) {
   if (kind === "lv") {
     const { data: l } = await db.from("levels").select(LEVEL_COLS).eq("id", Number(a)).maybeSingle();
     if (!l) return answer("This level is no longer on the list.", true);
-    await edit(await levelCard(l as Level));
+    await edit(await levelCard(l as Level, q.from.id));
     return answer();
   }
   if (kind === "q") {
     await edit(await searchPage(rest.join(":"), Number(a)));
     return answer();
   }
+  if (kind === "tp" || kind === "pp") {
+    await edit(kind === "tp" ? await topPage(Number(a)) : await playersPage(Number(a)));
+    return answer();
+  }
+  if (kind === "noop") return answer();
   if (kind === "pk") {
-    const card = await packCard(Number(a));
+    const card = await packCard(Number(a), q.from.id);
     if (!card) return answer("This pack was deleted.", true);
     await edit(card);
     return answer();
@@ -518,15 +601,21 @@ async function recordMessage(id: number) {
     .maybeSingle();
   const r = data as Json; // embedded rows are single objects (many-to-one)
   if (!r) return null;
-  const lines = [
-    `📥 <b>Record #${r.id}</b>`,
-    `${flag(r.player?.country)} <a href="${SITE}/player/${encodeURIComponent(r.player?.username)}">${esc(r.player?.username)}</a> → <b>#${r.level?.position} ${esc(r.level?.name)}</b>`,
-    `🎬 ${esc(r.video_url)}`,
-    r.note ? `💬 ${esc(r.note)}` : null,
-  ].filter((x) => x !== null);
   const done = r.status !== "pending";
-  if (done) lines.push("", r.status === "approved" ? `✅ <b>Accepted</b> by ${esc(r.reviewer?.username ?? "staff")}` : `❌ <b>Rejected</b> by ${esc(r.reviewer?.username ?? "staff")}${r.review_note ? `: ${esc(r.review_note)}` : ""}`);
-  const keyboard = done ? [] : [[cb("✅ Accept", `ra:${r.id}`), cb("❌ Reject", `rr:${r.id}`)], [btn("🛠 Admin panel", `${SITE}/admin`)]];
+  const lines = [
+    `📥 <b>New record</b> · <code>#${r.id}</code>`,
+    `<blockquote>👤 ${flag(r.player?.country)} <a href="${SITE}/player/${encodeURIComponent(r.player?.username)}">${esc(r.player?.username)}</a>`,
+    `🎯 <b>#${r.level?.position} ${esc(r.level?.name)}</b> · ${fmt(points(r.level?.position ?? 1))} pts</blockquote>`,
+    r.note ? `💬 <i>${esc(r.note)}</i>` : null,
+    done
+      ? r.status === "approved"
+        ? `\n✅ <b>Accepted</b> by ${esc(r.reviewer?.username ?? "staff")}`
+        : `\n❌ <b>Rejected</b> by ${esc(r.reviewer?.username ?? "staff")}${r.review_note ? `\n<i>${esc(r.review_note)}</i>` : ""}`
+      : null,
+  ].filter((x) => x !== null);
+  const keyboard = done
+    ? [[btn("▶️ Video", r.video_url)]]
+    : [[cb("✅ Accept", `ra:${r.id}`), cb("❌ Reject", `rr:${r.id}`)], [btn("▶️ Video", r.video_url), btn("🛠 Admin panel", `${SITE}/admin`)]];
   return { text: lines.join("\n"), parse_mode: "HTML", link_preview_options: preview(r.video_url), reply_markup: { inline_keyboard: keyboard } };
 }
 
@@ -537,17 +626,24 @@ async function submissionMessage(id: number) {
     .eq("id", id)
     .maybeSingle();
   if (!s) return null;
-  const lines = [
-    `🆕 <b>Level submission #${s.id}</b>`,
-    `<b>${esc(s.name)}</b> · ID <code>${s.gd_id}</code> · ${esc(fpsLabel(s.fps))}`,
-    `by ${esc(s.creator)} · published by ${esc(s.publisher)} · verified by ${esc(s.verifier)}`,
-    `🎬 ${esc(s.video_url)}`,
-    `📍 Placement: ${esc(s.placement)}`,
-    `👤 ${esc(s.submitter?.username)} · @${esc(s.telegram)}`,
-  ];
   const done = s.status !== "pending";
-  if (done) lines.push("", s.status === "approved" ? `✅ <b>Added</b> by ${esc(s.reviewer?.username ?? "staff")}` : `❌ <b>Rejected</b> by ${esc(s.reviewer?.username ?? "staff")}${s.review_note ? `: ${esc(s.review_note)}` : ""}`);
-  const keyboard = done ? [] : [[btn("✅ Accept on site", `${SITE}/admin`), cb("❌ Reject", `sr:${s.id}`)]];
+  const lines = [
+    `🆕 <b>Level submission</b> · <code>#${s.id}</code>`,
+    `<b>${esc(s.name)}</b>`,
+    `<blockquote>🛠 by ${esc(s.creator)} · published by ${esc(s.publisher)}`,
+    `✔️ verified by ${esc(s.verifier)}`,
+    `🆔 <code>${s.gd_id}</code> · 🎮 ${esc(fpsLabel(s.fps))}</blockquote>`,
+    `📍 <i>${esc(s.placement)}</i>`,
+    `👤 ${esc(s.submitter?.username)} · @${esc(s.telegram)}`,
+    done
+      ? s.status === "approved"
+        ? `\n✅ <b>Added</b> by ${esc(s.reviewer?.username ?? "staff")}`
+        : `\n❌ <b>Rejected</b> by ${esc(s.reviewer?.username ?? "staff")}${s.review_note ? `\n<i>${esc(s.review_note)}</i>` : ""}`
+      : null,
+  ].filter((x) => x !== null);
+  const keyboard = done
+    ? [[btn("▶️ Video", s.video_url)]]
+    : [[btn("✅ Accept on site", `${SITE}/admin`), cb("❌ Reject", `sr:${s.id}`)], [btn("▶️ Video", s.video_url)]];
   return { text: lines.join("\n"), parse_mode: "HTML", link_preview_options: preview(s.video_url), reply_markup: { inline_keyboard: keyboard } };
 }
 
@@ -579,6 +675,74 @@ async function toChangelogTopic(body: Json) {
   await tg("sendMessage", { chat_id: Number(cfg.group_chat_id), message_thread_id: cfg.changelog_thread_id ? Number(cfg.changelog_thread_id) : undefined, ...body });
 }
 
+/** Changelog post: what happened, where it is now, its points (and the video preview) */
+async function changelogBody(id: number) {
+  const { data: c } = await db.from("changelog").select("*").eq("id", id).maybeSingle();
+  if (!c) return null;
+  const { data: l } = c.level_id ? await db.from("levels").select(LEVEL_COLS).eq("id", c.level_id).maybeSingle() : { data: null };
+  const near = [c.next_name ? `above <b>${esc(c.next_name)}</b>` : null, c.prev_name ? `below <b>${esc(c.prev_name)}</b>` : null].filter(Boolean).join(" and ");
+  let text: string;
+  if (c.kind === "added") {
+    text = [
+      `🆕 <b>${esc(c.level_name)}</b> has been placed at <b>#${c.new_position}</b>`,
+      near ? `<i>${near}</i>` : null,
+      l
+        ? `<blockquote>🛠 by ${esc(l.creator)}\n✔️ verified by ${esc(l.verifier)}\n🏆 ${fmt(points(c.new_position))} points${l.fps ? ` · 🎮 ${esc(fpsLabel(l.fps))}` : ""}</blockquote>`
+        : null,
+    ].filter(Boolean).join("\n");
+  } else if (c.kind === "moved") {
+    const up = c.new_position < c.old_position;
+    const delta = Math.abs(c.old_position - c.new_position);
+    text = [
+      `${up ? "⬆️" : "⬇️"} <b>${esc(c.level_name)}</b> ${up ? "raised" : "lowered"} by ${delta}: #${c.old_position} → <b>#${c.new_position}</b>`,
+      near ? `<i>${near}</i>` : null,
+      `<blockquote>🏆 ${fmt(points(c.old_position))} → <b>${fmt(points(c.new_position))}</b> points</blockquote>`,
+    ].filter(Boolean).join("\n");
+  } else {
+    text = `🗑 <b>${esc(c.level_name)}</b> has been removed from the list\n<i>it was #${c.old_position}</i>`;
+  }
+  return {
+    text,
+    parse_mode: "HTML",
+    link_preview_options: c.kind === "removed" ? { is_disabled: true } : preview(l?.video_url),
+    reply_markup: l ? { inline_keyboard: [[btn("🌐 Open level", `${SITE}/level/${l.id}`)]] } : undefined,
+  };
+}
+
+/** Internal: send one of every message type to a Telegram user (design check) */
+async function sendPreview(chatId: number) {
+  const send = (body: Json) => tg("sendMessage", { chat_id: chatId, ...body });
+  await send({ text: "🎨 <b>Design preview</b> — one of each message the bot sends. Buttons work.", parse_mode: "HTML" });
+  const { data: top1 } = await db.from("levels").select(LEVEL_COLS).eq("position", 1).maybeSingle();
+  if (top1) await send(await levelCard(top1 as Level, chatId));
+  await send(await topPage(0));
+  await send(await playersPage(0));
+  const acc = await account(chatId);
+  if (acc) await send((await playerCard(acc.username))!);
+  const { data: pk } = await db.from("packs").select("id").order("created_at").limit(1).maybeSingle();
+  if (pk) await send((await packCard(pk.id, chatId))!);
+  for (const kind of ["added", "moved", "removed"]) {
+    const { data: c } = await db.from("changelog").select("id").eq("kind", kind).order("id", { ascending: false }).limit(1).maybeSingle();
+    if (c) await send({ ...(await changelogBody(c.id))!, text: `<i>Changelog topic:</i>\n${(await changelogBody(c.id))!.text}` });
+  }
+  // staff messages in their reviewed state (no live buttons)
+  const { data: r } = await db.from("records").select("id").neq("status", "pending").order("id", { ascending: false }).limit(1).maybeSingle();
+  if (r) {
+    const body = (await recordMessage(r.id))!;
+    await send({ ...body, text: `<i>Staff chat:</i>\n${body.text}` });
+  }
+  const { data: sub } = await db.from("level_submissions").select("id").neq("status", "pending").order("id", { ascending: false }).limit(1).maybeSingle();
+  if (sub) {
+    const body = (await submissionMessage(sub.id))!;
+    await send({ ...body, text: `<i>Staff chat:</i>\n${body.text}` });
+  }
+  await send({
+    text: "✅ <b>Your record was accepted</b>\nYour record on Example Level was accepted!",
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard: [[btn("🌐 Open on site", SITE)]] },
+  });
+}
+
 async function handleEvent(e: { type: string; id: number }) {
   switch (e.type) {
     case "notification": {
@@ -597,26 +761,8 @@ async function handleEvent(e: { type: string; id: number }) {
       return;
     }
     case "changelog": {
-      const { data: c } = await db.from("changelog").select("*").eq("id", e.id).maybeSingle();
-      if (!c) return;
-      const { data: l } = c.level_id ? await db.from("levels").select(LEVEL_COLS).eq("id", c.level_id).maybeSingle() : { data: null };
-      const near = [c.next_name ? `above <b>${esc(c.next_name)}</b>` : null, c.prev_name ? `below <b>${esc(c.prev_name)}</b>` : null].filter(Boolean).join(" and ");
-      let text: string;
-      if (c.kind === "added") {
-        text = `🆕 <b>${esc(c.level_name)}</b> has been placed at <b>#${c.new_position}</b>${near ? `, ${near}` : ""}.`;
-        if (l) text += `\n\nby ${esc(l.creator)} · verified by ${esc(l.verifier)}\n🏆 ${fmt(points(l.position))} points${l.fps ? ` · 🎮 ${esc(fpsLabel(l.fps))}` : ""}`;
-      } else if (c.kind === "moved") {
-        const up = c.new_position < c.old_position;
-        text = `${up ? "⬆️" : "⬇️"} <b>${esc(c.level_name)}</b> has been ${up ? "raised" : "lowered"} from #${c.old_position} to <b>#${c.new_position}</b>${near ? `, ${near}` : ""}.`;
-      } else {
-        text = `🗑 <b>${esc(c.level_name)}</b> has been removed from the list (was #${c.old_position}).`;
-      }
-      await toChangelogTopic({
-        text,
-        parse_mode: "HTML",
-        link_preview_options: c.kind === "added" ? preview(l?.video_url) : { is_disabled: true },
-        reply_markup: l ? { inline_keyboard: [[btn("🌐 Open level", `${SITE}/level/${l.id}`)]] } : undefined,
-      });
+      const body = await changelogBody(e.id);
+      if (body) await toChangelogTopic(body);
       return;
     }
     case "pack_created": {
@@ -629,6 +775,8 @@ async function handleEvent(e: { type: string; id: number }) {
       if (card) await toChangelogTopic({ ...card, text: `🆕 New pack!\n\n${card.text}` });
       return;
     }
+    case "preview":
+      return sendPreview(e.id);
     case "record_pending":
       return postToStaff("record", e.id);
     case "submission_pending":
