@@ -73,3 +73,14 @@ npm run dev
 Все паки с прогрессом игрока — на странице `/packs`.
 Игрок получает бонус, пока у него пройдены все уровни пака (принятый рекорд или верификация): лидерборд считает
 это на лету (`public.leaderboard.pack_bonus`), так что новый уровень в паке забирает бонус до его прохождения.
+
+## Telegram-бот (@challengegrind_bot)
+
+Edge Function `supabase/functions/telegram-bot` (миграция `0017_telegram_bot.sql`), разворачивается без CLI:
+`node scripts/deploy-function.mjs telegram-bot` — нужен `SUPABASE_ACCESS_TOKEN` и переменные бота в `.env` (см. `.env.example`).
+Скрипт ставит секреты функции, webhook и меню команд; адрес функции и внутренний секрет пишет в `public.telegram_config`.
+
+- Личка: `/login` (ник → пароль, сообщение с паролем бот удаляет, 5 попыток в час), уведомления с сайта, `/me`, `/notify on|off`, `/logout`.
+- Группа: `/top`, `/level`, `/search`, `/players`, `/player`, `/packs`, `/pack`, `/random`; changelog и новые паки — в тему из `telegram_config`.
+- Чат стаффа (`staff_chat_id` в `telegram_config`): новые рекорды с кнопками Accept/Reject (List Helper+, вошедшие в бота), заявки уровней — Reject (List Moderator+).
+- База шлёт события в функцию через `pg_net` (`public.tg_emit`); пароль проверяется по хешу в `public.tg_check_password`.
