@@ -7,6 +7,7 @@ import { supabase, errorText } from "../../lib/supabase";
 import { must, useAsync } from "../../lib/useAsync";
 import type { Level, LevelSubmission, Profile } from "../../lib/types";
 import { timeAgo } from "../../lib/time";
+import { useBadges } from "../../lib/badges";
 import { BrandIcon, Empty, ErrorBox, Flag, Spinner, VideoLink } from "../../components/ui";
 import { DraftFields, validate, type Draft } from "./LevelsTab";
 
@@ -15,6 +16,7 @@ type ListLevel = Pick<Level, "id" | "name" | "position">;
 
 /** List Moderator+: review level submissions. Accepting puts the level on the list. */
 export default function SubmissionsTab() {
+  const { refresh } = useBadges();
   const { data, loading, error, reload } = useAsync(async () => {
     const subs = must(
       await supabase
@@ -34,7 +36,12 @@ export default function SubmissionsTab() {
   return (
     <div className="flex flex-col gap-2.5">
       {data.subs.map((s) => (
-        <SubmissionCard key={s.id} s={s} levels={data.levels} onDone={reload} />
+        <SubmissionCard key={s.id} s={s} levels={data.levels}
+          onDone={() => {
+            void reload();
+            refresh(); // update the red counters right away
+          }}
+        />
       ))}
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router";
-import { ClipboardCheck, Inbox, ListOrdered, Package, ScrollText, Users } from "lucide-react";
+import { ClipboardCheck, History, Inbox, ListOrdered, Package, ScrollText, Users } from "lucide-react";
 import { useAuth } from "../../lib/auth";
 import { PageHeader, Spinner } from "../../components/ui";
 import RecordsTab from "./RecordsTab";
@@ -9,6 +9,8 @@ import SubmissionsTab from "./SubmissionsTab";
 import UsersTab from "./UsersTab";
 import RulesTab from "./RulesTab";
 import PacksTab from "./PacksTab";
+import LogTab from "./LogTab";
+import { CountBadge, useBadges } from "../../lib/badges";
 
 const TABS = [
   { id: "records", label: "Records", icon: ClipboardCheck, minRank: 1 },
@@ -17,10 +19,13 @@ const TABS = [
   { id: "packs", label: "Packs", icon: Package, minRank: 2 },
   { id: "users", label: "Players & staff", icon: Users, minRank: 3 },
   { id: "rules", label: "Rules", icon: ScrollText, minRank: 3 },
+  { id: "log", label: "Log", icon: History, minRank: 1 },
 ] as const;
 
 export default function AdminPage() {
   const { rank, loading } = useAuth();
+  const { pendingRecords, pendingLevels } = useBadges();
+  const pending: Partial<Record<(typeof TABS)[number]["id"], number>> = { records: pendingRecords, submissions: pendingLevels };
   const available = TABS.filter((t) => rank >= t.minRank);
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("records");
 
@@ -44,6 +49,7 @@ export default function AdminPage() {
             >
               <Icon className="h-4 w-4" />
               {t.label}
+              <CountBadge n={pending[t.id] ?? 0} />
             </button>
           );
         })}
@@ -54,6 +60,7 @@ export default function AdminPage() {
       {tab === "packs" && rank >= 2 && <PacksTab />}
       {tab === "users" && rank >= 3 && <UsersTab />}
       {tab === "rules" && rank >= 3 && <RulesTab />}
+      {tab === "log" && <LogTab />}
     </div>
   );
 }

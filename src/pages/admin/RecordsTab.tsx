@@ -5,6 +5,7 @@ import { supabase, errorText } from "../../lib/supabase";
 import { must, useAsync } from "../../lib/useAsync";
 import type { Level, Profile, RecordRow } from "../../lib/types";
 import { timeAgo } from "../../lib/time";
+import { useBadges } from "../../lib/badges";
 import { Empty, ErrorBox, Flag, Spinner, VideoLink } from "../../components/ui";
 
 type Pending = RecordRow & {
@@ -13,6 +14,7 @@ type Pending = RecordRow & {
 };
 
 export default function RecordsTab() {
+  const { refresh } = useBadges();
   const { data, loading, error, reload } = useAsync(
     async () =>
       must(
@@ -32,7 +34,12 @@ export default function RecordsTab() {
   return (
     <div className="flex flex-col gap-2.5">
       {data.map((r) => (
-        <PendingCard key={r.id} r={r} onDone={reload} />
+        <PendingCard key={r.id} r={r}
+          onDone={() => {
+            void reload();
+            refresh(); // update the red counters right away
+          }}
+        />
       ))}
     </div>
   );

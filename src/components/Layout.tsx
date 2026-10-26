@@ -6,17 +6,20 @@ import { useAuth } from "../lib/auth";
 import { supabaseConfigured } from "../lib/supabase";
 import { NAV_ADMIN, NAV_INFO, NAV_MAIN, type NavItem } from "./nav";
 import { Flag } from "./ui";
+import { NotificationsBell } from "./Notifications";
+import { BadgesProvider, CountBadge, useBadges } from "../lib/badges";
 
 function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2.5">
+    <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="ChallengeGrind">
       <img src="/logo.jpg" alt="" className="h-8 w-8 rounded-lg object-cover" />
-      <span className="text-[15px] font-semibold tracking-tight text-white">ChallengeGrind</span>
+      {/* hidden on phones: the bell and a long nickname need the room */}
+      <span className="hidden text-[15px] font-semibold tracking-tight text-white sm:inline">ChallengeGrind</span>
     </Link>
   );
 }
 
-function SideLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
+function SideLink({ item, onClick, badge = 0 }: { item: NavItem; onClick?: () => void; badge?: number }) {
   const Icon = item.icon;
   return (
     <NavLink
@@ -32,7 +35,8 @@ function SideLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
       {({ isActive }) => (
         <>
           <Icon className={`h-4 w-4 ${isActive ? "text-brand" : ""}`} />
-          {item.label}
+          <span className="flex-1">{item.label}</span>
+          <CountBadge n={badge} />
         </>
       )}
     </NavLink>
@@ -41,11 +45,12 @@ function SideLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { rank } = useAuth();
+  const { pendingRecords, pendingLevels } = useBadges();
   const group = (title: string, items: NavItem[]) => (
     <div className="flex flex-col gap-0.5">
       <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-neutral-500">{title}</div>
       {items.map((i) => (
-        <SideLink key={i.to} item={i} onClick={onNavigate} />
+        <SideLink key={i.to} item={i} onClick={onNavigate} badge={i === NAV_ADMIN ? pendingRecords + pendingLevels : 0} />
       ))}
     </div>
   );
@@ -79,11 +84,15 @@ function UserMenu() {
 
   const item = "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-surface-3";
   return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-surface-2">
+    <div ref={ref} className="relative min-w-0">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex min-w-0 max-w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-surface-2 sm:px-2.5"
+        title={profile.username}
+      >
         <Flag code={profile.country} />
-        <span className="max-w-32 truncate font-medium text-white">{profile.username}</span>
-        <ChevronDown className={`h-4 w-4 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+        <span className="min-w-0 max-w-[7.5rem] truncate font-medium text-white sm:max-w-40">{profile.username}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       <AnimatePresence>
         {open && (
@@ -94,6 +103,7 @@ function UserMenu() {
             transition={{ duration: 0.12 }}
             className="card absolute right-0 mt-1.5 w-48 p-1 shadow-lg shadow-black/40"
           >
+            <div className="truncate border-b border-line px-3 pb-2 pt-1.5 text-xs text-muted">{profile.username}</div>
             <Link onClick={() => setOpen(false)} to={`/player/${profile.username}`} className={item}>
               <User className="h-4 w-4 text-muted" /> Profile
             </Link>
@@ -117,6 +127,16 @@ function UserMenu() {
 }
 
 export default function Layout() {
+  return (
+    <BadgesProvider>
+      <Shell />
+    </BadgesProvider>
+  );
+}
+
+function Shell() {
+  const { session } = useAuth();
+  const { pendingRecords, pendingLevels } = useBadges();
   const [drawer, setDrawer] = useState(false);
   const location = useLocation();
 
@@ -132,11 +152,17 @@ export default function Layout() {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4">
-          <button onClick={() => setDrawer(true)} className="-ml-1.5 grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-white lg:hidden" aria-label="Open menu">
+          <button
+            onClick={() => setDrawer(true)}
+            className="relative -ml-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-white lg:hidden"
+            aria-label="Open menu"
+          >
             <Menu className="h-5 w-5" />
+            <CountBadge n={pendingRecords + pendingLevels} className="absolute -right-1 -top-1" />
           </button>
           <Logo />
-          <div className="ml-auto">
+          <div className="ml-auto flex min-w-0 items-center gap-1">
+            {session && <NotificationsBell />}
             <UserMenu />
           </div>
         </div>

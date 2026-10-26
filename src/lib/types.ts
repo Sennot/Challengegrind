@@ -95,3 +95,38 @@ export interface LevelSubmission {
   created_at: string;
   reviewed_at: string | null;
 }
+
+export type NotificationKind = "record_approved" | "record_rejected" | "level_approved" | "level_rejected" | "pack_completed" | "role_changed";
+
+export interface AppNotification {
+  id: number;
+  kind: NotificationKind;
+  title: string;
+  body: string | null;
+  /** site path, e.g. "/level/12" */
+  link: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export type StaffAction =
+  | "record_approved" | "record_rejected" | "record_deleted"
+  | "level_added" | "level_moved" | "level_removed" | "level_edited"
+  | "submission_approved" | "submission_rejected" | "submission_deleted"
+  | "pack_created" | "pack_edited" | "pack_deleted"
+  | "role_changed" | "user_banned" | "user_unbanned" | "password_reset"
+  | "rules_updated";
+
+export interface StaffLogEntry {
+  id: number;
+  actor_id: string | null;
+  /** "System" for changes made directly in the database */
+  actor_name: string;
+  action: StaffAction;
+  target_id: string | null;
+  target_name: string | null;
+  level_id: number | null;
+  level_name: string | null;
+  details: Record<string, unknown>;
+  created_at: string;
+}

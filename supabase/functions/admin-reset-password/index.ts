@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
   if (password.length < 8 || password.length > 72) return json({ error: "password must be 8–72 characters" }, 400);
   if (userId === user.id) return json({ error: "use account settings to change your own password" }, 400);
 
-  const { data: rows, error } = await admin.from("profiles").select("id, role, banned").in("id", [user.id, userId]);
+  const { data: rows, error } = await admin.from("profiles").select("id, username, role, banned").in("id", [user.id, userId]);
   if (error) return json({ error: "lookup failed" }, 500);
 
   const caller = rows?.find((r) => r.id === user.id);
@@ -59,6 +59,15 @@ Deno.serve(async (req) => {
 
   const { error: updErr } = await admin.auth.admin.updateUserById(userId, { password });
   if (updErr) return json({ error: updErr.message }, 400);
+
+  // Staff log (0016): only this function knows who reset the password
+  await admin.from("staff_log").insert({
+    actor_id: caller.id,
+    actor_name: caller.username,
+    action: "password_reset",
+    target_id: target.id,
+    target_name: target.username,
+  });
 
   // Kick whoever was using the account (e.g. an impostor) off every device
   const { error: revokeErr } = await admin.rpc("admin_revoke_sessions", { p_user_id: userId });

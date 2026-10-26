@@ -10,6 +10,7 @@ import ChangelogPage from "./pages/ChangelogPage";
 import SubmitPage from "./pages/SubmitPage";
 import SubmitLevelPage from "./pages/SubmitLevelPage";
 import SettingsPage from "./pages/SettingsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import AdminPage from "./pages/admin/AdminPage";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
 import { NotFoundPage, RulesPage, SocialsPage, TeamPage } from "./pages/InfoPages";
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="admin" element={<AdminPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
