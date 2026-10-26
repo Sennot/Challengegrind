@@ -80,6 +80,8 @@ await tg("setMyCommands", { commands: common, scope: { type: "all_group_chats" }
 await tg("setMyCommands", {
   commands: [
     { command: "login", description: "Link your ChallengeGrind account" },
+    { command: "submit", description: "Submit a record" },
+    { command: "submitlevel", description: "Submit a level" },
     { command: "me", description: "Your stats" },
     { command: "notify", description: "Turn notifications on/off" },
     { command: "logout", description: "Unlink your account" },

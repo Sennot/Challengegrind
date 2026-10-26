@@ -93,7 +93,8 @@ async function hit(key: string) {
 
 async function getState(tgUser: number) {
   const { data } = await db.from("telegram_state").select("*").eq("tg_user_id", tgUser).maybeSingle();
-  if (data && Date.now() - new Date(data.updated_at).getTime() > 15 * 60_000) {
+  const ttl = data?.step?.startsWith("submit_") ? 30 : 15; // minutes
+  if (data && Date.now() - new Date(data.updated_at).getTime() > ttl * 60_000) {
     await clearState(tgUser);
     return null;
   }
@@ -318,6 +319,7 @@ const HELP = [
   "",
   "<b>In private messages</b>",
   "/login — link your site account (site notifications come here)",
+  "/submit — submit a record · /submitlevel — submit a level",
   "/me — your stats · /notify on|off · /logout",
 ].join("\n");
 
@@ -351,7 +353,7 @@ async function onMessage(m: Json) {
     if (cmd[2] && cmd[2].toLowerCase() !== BOT.toLowerCase()) return; // another bot's command
     const name = cmd[1].toLowerCase();
     const arg = (cmd[3] ?? "").trim();
-    if (state && name !== "cancel") await clearState(from.id);
+    if (state && name !== "cancel" && name !== "skip") await clearState(from.id);
 
     // cooldown for public commands in groups
     if (!isPrivate && !["login", "cancel", "setstaff"].includes(name)) {
@@ -363,6 +365,8 @@ async function onMessage(m: Json) {
 
   // Multi-step conversations
   if (!state || !text) return;
+  if (isPrivate && state.step === "submit_record") return recordInput(from, text, dm(chat.id));
+  if (isPrivate && state.step === "submit_level") return levelInput(from, text, dm(chat.id));
   if (state.step === "login_username" && isPrivate) {
     if (!/^[A-Za-z0-9_]{3,20}$/.test(text)) return say("That doesn't look like a nickname (3–20 letters, digits, _). Try again or /cancel.");
     await setState(from.id, "login_password", { username: text });
@@ -384,6 +388,8 @@ async function command(name: string, arg: string, c: Ctx) {
   switch (name) {
     case "start":
       if (isPrivate && arg === "login") return command("login", "", c);
+      if (isPrivate && arg === "submit") return command("submit", "", c);
+      if (isPrivate && arg === "submitlevel") return command("submitlevel", "", c);
       return say(HELP);
     case "help":
       return say(HELP);
@@ -468,6 +474,20 @@ async function command(name: string, arg: string, c: Ctx) {
       if (exact || data.length === 1) return reply((await packCard((exact ?? data[0]).id, from.id))!);
       return say("Several packs match — pick one:", { reply_markup: { inline_keyboard: data.map((p: Json) => [cb(`📦 ${p.name}`.slice(0, 60), `pk:${p.id}`)]) } });
     }
+    case "submit":
+    case "submitlevel": {
+      if (!isPrivate) {
+        return say(name === "submit" ? "Submit records in private messages:" : "Submit levels in private messages:", {
+          reply_markup: { inline_keyboard: [[btn(name === "submit" ? "📨 Submit a record" : "🆕 Submit a level", `https://t.me/${BOT}?start=${name}`)]] },
+        });
+      }
+      return name === "submit" ? startRecord(from, arg, dm(c.chat.id)) : startLevel(from, dm(c.chat.id));
+    }
+    case "skip": {
+      const st = c.state;
+      if (isPrivate && st?.step === "submit_record" && st.data.stage === "note") return recordInput(from, null, dm(c.chat.id));
+      return say("Nothing to skip here.");
+    }
     case "setstaff": {
       // List Admin+ (logged in to the bot) marks this chat / topic as the staff chat
       if (isPrivate) return say("Send /setstaff in the staff chat (inside the topic, if it's a forum).");
@@ -507,6 +527,255 @@ async function login(from: Json, username: string, password: string, say: (h: st
   );
 }
 
+// ---------------------------------------------------------------- submitting from the DM
+
+// Same rules as the site forms and the database checks
+const VIDEO_RE = /^https:\/\/((www\.|m\.)?youtube\.com|youtu\.be|t\.me|telegram\.me)\//;
+const FPS_RE = /^[A-Za-z0-9 /+.-]{1,20}$/;
+const TG_RE = /^[A-Za-z0-9_]{4,32}$/;
+
+type Say = (html: string, extra?: Json) => Promise<Json>;
+const dm = (chatId: number): Say => (html, extra = {}) =>
+  tg("sendMessage", { chat_id: chatId, text: html, parse_mode: "HTML", link_preview_options: { is_disabled: true }, ...extra });
+const okNo = (prefix: string) => ({ inline_keyboard: [[cb("✅ Submit", `${prefix}:ok`), cb("❌ Cancel", `${prefix}:no`)]] });
+
+async function submitter(tgUser: number, say: Say) {
+  const acc = await account(tgUser);
+  if (!acc) {
+    await say("Log in first — /login (your ChallengeGrind nickname and password).");
+    return null;
+  }
+  if (acc.banned) {
+    await say("Your account is banned, you can't submit.");
+    return null;
+  }
+  return acc;
+}
+
+// ----- records
+
+/** Levels that can't take a new record: completed, verified or already pending */
+async function blockedLevels(userId: string) {
+  const [{ data: rec }, { data: ver }] = await Promise.all([
+    db.from("records").select("level_id").eq("player_id", userId).neq("status", "rejected"),
+    db.from("levels").select("id").eq("verifier_id", userId),
+  ]);
+  return new Set([...(rec ?? []).map((r: Json) => Number(r.level_id)), ...(ver ?? []).map((l: Json) => Number(l.id))]);
+}
+
+async function startRecord(from: Json, query: string, say: Say) {
+  if (!(await submitter(from.id, say))) return;
+  await setState(from.id, "submit_record", { stage: "level" });
+  if (query) return recordInput(from, query, say);
+  return say("📨 <b>Submit a record</b>\nWhich level? Send its <b>name</b>, <code>#position</code> or level ID.\n\n/cancel to stop.");
+}
+
+async function chooseRecordLevel(from: Json, l: { id: number; name: string; position: number }, say: Say) {
+  await setState(from.id, "submit_record", { stage: "video", level_id: l.id, level: `#${l.position} ${l.name}` });
+  return say(`🎯 <b>#${l.position} ${esc(l.name)}</b>\n\n🎬 Now send the <b>video link</b> — YouTube or a Telegram post.\nRaw footage isn't required, but keep it for 3 days.`);
+}
+
+async function recordInput(from: Json, text: string | null, say: Say) {
+  const st = await getState(from.id);
+  if (st?.step !== "submit_record") return;
+  const d = st.data;
+  const acc = await submitter(from.id, say);
+  if (!acc) return clearState(from.id);
+
+  if (d.stage === "level") {
+    if (!text) return say("Send the level name, <code>#position</code> or level ID.");
+    const blocked = await blockedLevels(acc.id);
+    const found = (await findLevels(text)).filter((l) => !blocked.has(Number(l.id)));
+    if (!found.length) return say("No level you can submit matches that — levels you've completed or already submitted are hidden.\nTry another name or /cancel.");
+    if (found.length === 1) return chooseRecordLevel(from, found[0], say);
+    return say("Several levels match — pick one:", {
+      reply_markup: { inline_keyboard: found.slice(0, PAGE).map((l) => [cb(`#${l.position} ${l.name} — ${l.creator}`.slice(0, 60), `sb:lv:${l.id}`)]) },
+    });
+  }
+  if (d.stage === "video") {
+    if (!text || text.length > 300 || !VIDEO_RE.test(text)) return say("That's not a YouTube or Telegram link. Send <code>https://youtu.be/…</code> or <code>https://t.me/…</code>");
+    await setState(from.id, "submit_record", { ...d, stage: "note", video: text });
+    return say("💬 Add a <b>comment</b> for staff (FPS, CBF, …) or skip it.", { reply_markup: { inline_keyboard: [[cb("Skip ⏭", "sb:skip")]] } });
+  }
+  if (d.stage === "note") {
+    const note = text ? text.slice(0, 500) : null;
+    await setState(from.id, "submit_record", { ...d, stage: "confirm", note });
+    const lines = [`🎯 <b>${esc(d.level)}</b>`, `🎬 ${esc(d.video)}`, note ? `💬 ${esc(note)}` : null].filter(Boolean);
+    return say(`📨 <b>Check your record</b>\n<blockquote>${lines.join("\n")}</blockquote>`, { reply_markup: okNo("sb") });
+  }
+  return say("Tap ✅ Submit or ❌ Cancel above.");
+}
+
+async function submitRecord(from: Json, say: Say) {
+  const st = await getState(from.id);
+  if (st?.step !== "submit_record" || st.data.stage !== "confirm") return say("Nothing to submit — start again with /submit.");
+  const acc = await submitter(from.id, say);
+  await clearState(from.id);
+  if (!acc) return;
+  const d = st.data;
+  const { error } = await db.rpc("tg_submit_record", { p_user: acc.id, p_level: d.level_id, p_video: d.video, p_note: d.note });
+  if (error) {
+    const m = error.message;
+    return say(
+      m.includes("records_one_active_idx")
+        ? "You already have a record on this level (pending or accepted)."
+        : m.includes("too many pending")
+          ? "Too many pending records (max 10) — wait for staff to review some."
+          : m.includes("video_url")
+            ? "That video link isn't allowed — use YouTube or a Telegram post."
+            : `Couldn't submit: ${esc(m)}`,
+    );
+  }
+  return say(`✅ <b>Record submitted!</b>\n${esc(d.level)} — staff will review it and I'll tell you the result here.`, {
+    reply_markup: { inline_keyboard: [[btn("🌐 My profile", `${SITE}/player/${encodeURIComponent(acc.username)}`)]] },
+  });
+}
+
+// ----- levels
+
+type Field = { key: string; prompt: string; check: (v: string) => string | null };
+const LEVEL_FIELDS: Field[] = [
+  { key: "gd_id", prompt: "Send the <b>level ID</b> (digits).", check: (v) => (/^\d{1,12}$/.test(v) && Number(v) > 0 ? null : "The level ID must be digits only.") },
+  { key: "name", prompt: "Level <b>name</b>?", check: (v) => (v.length <= 64 ? null : "Up to 64 characters.") },
+  { key: "creator", prompt: "<b>Creator(s)</b>? e.g. <i>Player1, Player2</i>", check: (v) => (v.length <= 128 ? null : "Up to 128 characters.") },
+  { key: "publisher", prompt: "<b>Publisher</b> — the account that uploaded the level?", check: (v) => (v.length <= 64 ? null : "Up to 64 characters.") },
+  { key: "verifier", prompt: "<b>Verifier</b> — who beat it first?", check: (v) => (v.length <= 64 ? null : "Up to 64 characters.") },
+  { key: "fps", prompt: "<b>FPS</b>? e.g. <i>240</i> or <i>CBF</i>", check: (v) => (FPS_RE.test(v) ? null : "FPS: e.g. 240 or CBF (letters, digits, / + . -).") },
+  { key: "video", prompt: "<b>Verification video</b> — YouTube or a Telegram post link.", check: (v) => (v.length <= 300 && VIDEO_RE.test(v) ? null : "Send a YouTube or Telegram post link (https://…).") },
+  { key: "placement", prompt: "Where do you think it belongs? e.g. <i>around #15, harder than X</i>", check: (v) => (v.length <= 500 ? null : "Up to 500 characters.") },
+];
+
+async function askLevelField(from: Json, d: Json, say: Say) {
+  const i = LEVEL_FIELDS.findIndex((f) => f.key === d.stage);
+  const f = LEVEL_FIELDS[i];
+  const extra = f.key === "verifier" ? { reply_markup: { inline_keyboard: [[cb("✋ I verified it", "sl:me")]] } } : {};
+  return say(`<i>Step ${i + 1}/${LEVEL_FIELDS.length}</i> · ${f.prompt}`, extra);
+}
+
+async function startLevel(from: Json, say: Say) {
+  if (!(await submitter(from.id, say))) return;
+  const d = { stage: "gd_id" };
+  await setState(from.id, "submit_level", d);
+  await say("🆕 <b>Submit a level</b> — a few questions, /cancel any time.");
+  return askLevelField(from, d, say);
+}
+
+async function levelInput(from: Json, text: string | null, say: Say) {
+  const st = await getState(from.id);
+  if (st?.step !== "submit_level") return;
+  const d = st.data;
+  if (d.stage === "telegram") {
+    const v = (text ?? "").replace(/^@/, "").replace(/^https:\/\/t\.me\//, "");
+    if (!TG_RE.test(v)) return say("Send a Telegram username staff can contact (4–32 letters, digits, _), without @.");
+    return confirmLevel(from, { ...d, telegram: v }, say);
+  }
+  if (d.stage === "confirm") return say("Tap ✅ Submit or ❌ Cancel above.");
+  const f = LEVEL_FIELDS.find((x) => x.key === d.stage);
+  if (!f) return;
+  const v = (text ?? "").trim();
+  if (!v) return say(`Please answer: ${f.prompt}`);
+  const err = f.check(v);
+  if (err) return say(`${err} Try again or /cancel.`);
+  if (f.key === "gd_id") {
+    const { data: on } = await db.from("levels").select("name, position").eq("gd_id", Number(v)).maybeSingle();
+    if (on) return say(`This level is already on the list: <b>#${on.position} ${esc(on.name)}</b>. Send another level ID or /cancel.`);
+  }
+  return nextLevelField(from, { ...d, [f.key]: v }, say);
+}
+
+async function nextLevelField(from: Json, d: Json, say: Say) {
+  const i = LEVEL_FIELDS.findIndex((f) => f.key === d.stage);
+  const next = LEVEL_FIELDS[i + 1];
+  if (next) {
+    const nd = { ...d, stage: next.key };
+    await setState(from.id, "submit_level", nd);
+    return askLevelField(from, nd, say);
+  }
+  // Telegram contact: the user's @username if they have one
+  if (from.username && TG_RE.test(from.username)) return confirmLevel(from, { ...d, telegram: from.username }, say);
+  await setState(from.id, "submit_level", { ...d, stage: "telegram" });
+  return say("You don't have a Telegram @username set — send a username staff can contact you at (without @).");
+}
+
+async function confirmLevel(from: Json, d: Json, say: Say) {
+  await setState(from.id, "submit_level", { ...d, stage: "confirm" });
+  const lines = [
+    `<b>${esc(d.name)}</b> · ID <code>${esc(d.gd_id)}</code> · 🎮 ${esc(fpsLabel(d.fps))}`,
+    `🛠 by ${esc(d.creator)} · published by ${esc(d.publisher)}`,
+    `✔️ verified by ${esc(d.verifier)}`,
+    `🎬 ${esc(d.video)}`,
+    `📍 ${esc(d.placement)}`,
+    `👤 contact: @${esc(d.telegram)}`,
+  ];
+  return say(`🆕 <b>Check your level</b>\n<blockquote>${lines.join("\n")}</blockquote>\nOnly you and the staff see your Telegram contact.`, { reply_markup: okNo("sl") });
+}
+
+async function submitLevel(from: Json, say: Say) {
+  const st = await getState(from.id);
+  if (st?.step !== "submit_level" || st.data.stage !== "confirm") return say("Nothing to submit — start again with /submitlevel.");
+  const acc = await submitter(from.id, say);
+  await clearState(from.id);
+  if (!acc) return;
+  const d = st.data;
+  const { error } = await db.rpc("tg_submit_level", {
+    p_user: acc.id,
+    p_gd_id: Number(d.gd_id),
+    p_fps: d.fps,
+    p_name: d.name,
+    p_creator: d.creator,
+    p_publisher: d.publisher,
+    p_verifier: d.verifier,
+    p_video: d.video,
+    p_placement: d.placement,
+    p_telegram: d.telegram,
+  });
+  if (error) {
+    const m = error.message;
+    return say(
+      m.includes("level_submissions_one_pending_idx")
+        ? "You already have a pending submission of this level."
+        : m.includes("already on the list")
+          ? "This level is already on the list."
+          : m.includes("too many pending")
+            ? "Too many pending level submissions (max 3)."
+            : `Couldn't submit: ${esc(m)}`,
+    );
+  }
+  return say(`✅ <b>Level submitted!</b>\n${esc(d.name)} — staff will review it and I'll tell you the result here.`);
+}
+
+/** Inline buttons of both wizards (DM only) */
+async function onSubmitButton(q: Json, kind: string, a: string, b: string | undefined) {
+  const say = dm(q.from.id);
+  const st = await getState(q.from.id);
+  if (kind === "sb") {
+    if (st?.step !== "submit_record") return "This form has expired — start again with /submit.";
+    if (a === "lv") {
+      const acc = await submitter(q.from.id, say);
+      if (!acc) return;
+      const { data: l } = await db.from("levels").select("id, name, position").eq("id", Number(b)).maybeSingle();
+      if (!l || (await blockedLevels(acc.id)).has(Number(l.id))) return "You can't submit this level.";
+      await chooseRecordLevel(q.from, l, say);
+    } else if (a === "skip") await recordInput(q.from, null, say);
+    else if (a === "ok") await submitRecord(q.from, say);
+    else if (a === "no") {
+      await clearState(q.from.id);
+      await say("Cancelled.");
+    }
+    return;
+  }
+  if (st?.step !== "submit_level") return "This form has expired — start again with /submitlevel.";
+  if (a === "me") {
+    if (st.data.stage !== "verifier") return;
+    const acc = await submitter(q.from.id, say);
+    if (acc) await nextLevelField(q.from, { ...st.data, verifier: acc.username }, say);
+  } else if (a === "ok") await submitLevel(q.from, say);
+  else if (a === "no") {
+    await clearState(q.from.id);
+    await say("Cancelled.");
+  }
+}
+
 // ---------------------------------------------------------------- buttons
 
 async function onCallback(q: Json) {
@@ -531,6 +800,11 @@ async function onCallback(q: Json) {
     return answer();
   }
   if (kind === "noop") return answer();
+  if (kind === "sb" || kind === "sl") {
+    if (msg.chat.type !== "private") return answer();
+    const err = await onSubmitButton(q, kind, a, rest[0]);
+    return answer(err ?? undefined, Boolean(err));
+  }
   if (kind === "pk") {
     const card = await packCard(Number(a), q.from.id);
     if (!card) return answer("This pack was deleted.", true);
