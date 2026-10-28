@@ -10,13 +10,16 @@ import { Empty, ErrorBox, Flag, Spinner, VideoEmbed, VideoLink } from "../compon
 import { DoneCheck, PackBadge } from "../components/PackBadge";
 import { fetchLevelPacks, isPackDone, type Pack } from "../lib/packs";
 import { useMyCompletions } from "../lib/completions";
+import { useAuth } from "../lib/auth";
+import RevokeButton from "../components/RevokeButton";
 
 type Victor = { id: number; video_url: string; reviewed_at: string | null; player: Pick<Profile, "username" | "country" | "banned"> };
 type LevelWithVerifier = Level & { verifier_profile: Pick<Profile, "username" | "country"> | null };
 
 export default function LevelPage() {
   const { id } = useParams();
-  const { data, loading, error } = useAsync(async () => {
+  const { rank } = useAuth();
+  const { data, loading, error, reload } = useAsync(async () => {
     const level = must(
       await supabase
         .from("levels")
@@ -129,13 +132,15 @@ export default function LevelPage() {
         ) : (
           <div className="card divide-y divide-line">
             {victors.map((v) => (
-              <div key={v.id} className="flex items-center gap-3 px-4 py-2.5">
+              <div key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
                 <Flag code={v.player.country} />
                 <Link to={`/player/${v.player.username}`} className="min-w-0 flex-1 truncate text-sm font-medium text-white hover:text-brand">
                   {v.player.username}
                 </Link>
                 {v.reviewed_at && <span className="hidden text-xs text-muted sm:inline">{formatDate(v.reviewed_at)}</span>}
                 <VideoLink url={v.video_url} />
+                {/* List Helper+: take an accepted record down */}
+                {rank >= 1 && <RevokeButton recordId={v.id} label={`${v.player.username}'s record`} onDone={() => void reload()} compact />}
               </div>
             ))}
           </div>

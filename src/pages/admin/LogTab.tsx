@@ -10,7 +10,7 @@ import { Empty, ErrorBox, Spinner, VideoLink } from "../../components/ui";
 const PAGE = 50;
 
 const GROUPS: { id: string; label: string; actions: StaffAction[] }[] = [
-  { id: "records", label: "Records", actions: ["record_approved", "record_rejected", "record_deleted"] },
+  { id: "records", label: "Records", actions: ["record_approved", "record_rejected", "record_revoked", "record_deleted"] },
   { id: "levels", label: "Levels", actions: ["level_added", "level_moved", "level_removed", "level_edited"] },
   { id: "submissions", label: "Level submissions", actions: ["submission_approved", "submission_rejected", "submission_deleted"] },
   { id: "packs", label: "Packs", actions: ["pack_created", "pack_edited", "pack_deleted"] },
@@ -23,6 +23,7 @@ const ICON: Record<StaffAction, [LucideIcon, string]> = {
   record_approved: [CheckCircle2, TONE.good],
   record_rejected: [XCircle, TONE.bad],
   record_deleted: [Trash2, TONE.bad],
+  record_revoked: [Trash2, TONE.bad],
   level_added: [ListPlus, TONE.good],
   level_moved: [ArrowUp, TONE.info],
   level_removed: [Trash2, TONE.bad],
@@ -167,6 +168,8 @@ function sentence(e: StaffLogEntry): ReactNode {
       return <>{a} accepted <Player e={e} />'s record on <Level e={e} /></>;
     case "record_rejected":
       return <>{a} rejected <Player e={e} />'s record on <Level e={e} /></>;
+    case "record_revoked":
+      return <>{a} removed <Player e={e} />'s accepted record on <Level e={e} /></>;
     case "record_deleted":
       return <>{a} deleted <Player e={e} />'s {str(d.status) === "approved" ? "accepted" : str(d.status)} record on <Level e={e} /></>;
     case "level_added":

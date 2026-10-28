@@ -110,7 +110,7 @@ export interface AppNotification {
 }
 
 export type StaffAction =
-  | "record_approved" | "record_rejected" | "record_deleted"
+  | "record_approved" | "record_rejected" | "record_deleted" | "record_revoked"
   | "level_added" | "level_moved" | "level_removed" | "level_edited"
   | "submission_approved" | "submission_rejected" | "submission_deleted"
   | "pack_created" | "pack_edited" | "pack_deleted"

@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
-import { Check, Inbox, X } from "lucide-react";
+import { Check, Copy, Inbox, Search, X } from "lucide-react";
 import { supabase, errorText } from "../../lib/supabase";
 import { must, useAsync } from "../../lib/useAsync";
 import type { Level, Profile, RecordRow } from "../../lib/types";
 import { timeAgo } from "../../lib/time";
 import { useBadges } from "../../lib/badges";
 import { Empty, ErrorBox, Flag, Spinner, VideoLink } from "../../components/ui";
+import RevokeButton from "../../components/RevokeButton";
+import { formatDate } from "../../lib/time";
 
 type Pending = RecordRow & {
   level: Pick<Level, "id" | "name" | "position">;
@@ -14,6 +16,29 @@ type Pending = RecordRow & {
 };
 
 export default function RecordsTab() {
+  const [mode, setMode] = useState<"pending" | "accepted">("pending");
+  const { pendingRecords } = useBadges();
+  const tab = (id: typeof mode, label: string, n?: number) => (
+    <button
+      onClick={() => setMode(id)}
+      className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${mode === id ? "bg-surface-3 font-medium text-white" : "text-muted hover:text-white"}`}
+    >
+      {label}
+      {n ? <span className="tabular-nums text-xs text-muted">{n}</span> : null}
+    </button>
+  );
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex w-fit gap-1 rounded-lg border border-line bg-surface-2 p-1">
+        {tab("pending", "Pending", pendingRecords)}
+        {tab("accepted", "Accepted")}
+      </div>
+      {mode === "pending" ? <PendingRecords /> : <AcceptedRecords />}
+    </div>
+  );
+}
+
+function PendingRecords() {
   const { refresh } = useBadges();
   const { data, loading, error, reload } = useAsync(
     async () =>
@@ -98,6 +123,89 @@ function PendingCard({ r, onDone }: { r: Pending; onDone: () => void }) {
         </div>
       </div>
       {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+    </div>
+  );
+}
+
+type Accepted = RecordRow & { level: Pick<Level, "id" | "name" | "position"> };
+
+/** Accepted records of one player, with a Remove button; records sharing a video are flagged */
+function AcceptedRecords() {
+  const [q, setQ] = useState("");
+  const [name, setName] = useState("");
+  const { data, loading, error, reload } = useAsync(async () => {
+    if (!name) return null;
+    // case-insensitive exact match; escape LIKE wildcards ("_" is allowed in nicknames)
+    const pattern = name.replace(/[\\%_]/g, (c) => `\\${c}`);
+    const player = must(await supabase.from("profiles").select("id, username, country").ilike("username", pattern).maybeSingle()) as Pick<
+      Profile,
+      "id" | "username" | "country"
+    > | null;
+    if (!player) return { player: null, records: [] as Accepted[] };
+    const records = must(
+      await supabase.from("records").select("*, level:levels(id, name, position)").eq("player_id", player.id).eq("status", "approved"),
+    ) as unknown as Accepted[];
+    return { player, records: records.sort((a, b) => a.level.position - b.level.position) };
+  }, [name]);
+
+  const search = (e: FormEvent) => {
+    e.preventDefault();
+    setName(q.trim().replace(/^@/, ""));
+  };
+
+  // how many accepted records use each video
+  const uses = new Map<string, number>();
+  for (const r of data?.records ?? []) uses.set(r.video_url, (uses.get(r.video_url) ?? 0) + 1);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <form onSubmit={search} className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <input className="input pl-9" placeholder="Player nickname" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <button className="btn-primary">Show</button>
+      </form>
+
+      {!name ? (
+        <p className="text-sm text-muted">Find a player to see their accepted records. You can also remove a record from the level page.</p>
+      ) : loading && !data ? (
+        <Spinner />
+      ) : error ? (
+        <ErrorBox message={error} />
+      ) : !data?.player ? (
+        <Empty>No player called “{name}”</Empty>
+      ) : !data.records.length ? (
+        <Empty>{data.player.username} has no accepted records</Empty>
+      ) : (
+        <div className="card divide-y divide-line">
+          <div className="flex items-center gap-2 px-4 py-2.5 text-sm">
+            <Flag code={data.player.country} />
+            <Link to={`/player/${data.player.username}`} className="font-medium text-white hover:text-brand">
+              {data.player.username}
+            </Link>
+            <span className="text-muted">· {data.records.length} accepted</span>
+          </div>
+          {data.records.map((r) => {
+            const shared = (uses.get(r.video_url) ?? 0) > 1;
+            return (
+              <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
+                <Link to={`/level/${r.level.id}`} className="min-w-0 flex-1 truncate text-sm">
+                  <span className="tabular-nums text-muted">#{r.level.position}</span> <span className="font-medium text-white hover:text-brand">{r.level.name}</span>
+                </Link>
+                {shared && (
+                  <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-300" title={r.video_url}>
+                    <Copy className="h-3 w-3" /> same video ×{uses.get(r.video_url)}
+                  </span>
+                )}
+                {r.reviewed_at && <span className="hidden text-xs text-muted sm:inline">{formatDate(r.reviewed_at)}</span>}
+                <VideoLink url={r.video_url} />
+                <RevokeButton recordId={r.id} label={`the record on ${r.level.name}`} onDone={() => void reload()} compact />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
