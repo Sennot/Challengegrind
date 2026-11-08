@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { AuthProvider } from "./lib/auth";
 import Layout from "./components/Layout";
 import ListPage from "./pages/ListPage";
+import HomePage from "./pages/HomePage";
 import LevelPage from "./pages/LevelPage";
 import StatsPage from "./pages/StatsPage";
 import PacksPage from "./pages/PacksPage";
@@ -21,7 +22,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
-            <Route index element={<ListPage />} />
+            <Route index element={<HomePage />} />
+            <Route path="list" element={<ListPage />} />
             <Route path="level/:id" element={<LevelPage />} />
             <Route path="packs" element={<PacksPage />} />
             <Route path="stats" element={<StatsPage />} />

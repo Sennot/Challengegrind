@@ -11,14 +11,14 @@ import { BrandIcon, Empty, ErrorBox, Flag, PageHeader, SocialLinks, Spinner } fr
 export function RulesPage() {
   const { data, loading, error } = useAsync(fetchRules, []);
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <PageHeader title="Rules" />
       {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : null}
       <div className="flex flex-col gap-3">
         {data?.map((section, i) => (
           <section key={section.title} className="card p-5">
             <h2 className="mb-3 font-medium text-white">
-              <span className="mr-2 tabular-nums text-brand">{i + 1}.</span>
+              <span className="num mr-2 text-neutral-500">{i + 1}.</span>
               {section.title}
             </h2>
             <ul className="flex flex-col gap-2 text-sm text-neutral-300">
@@ -45,7 +45,7 @@ export function TeamPage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <PageHeader title="List team" />
       {loading ? (
         <Spinner />
@@ -83,7 +83,7 @@ export function TeamPage() {
 
 export function SocialsPage() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <PageHeader title="Socials" />
       <div className="flex flex-col gap-2.5">
         {SOCIALS.map((s) => (
@@ -112,7 +112,7 @@ export function SocialsPage() {
 export function NotFoundPage() {
   return (
     <div className="flex flex-col items-center gap-3 py-24 text-center">
-      <div className="text-5xl font-semibold text-white">404</div>
+      <div className="text-5xl font-medium text-white">404</div>
       <p className="text-sm text-muted">Page not found</p>
       <Link to="/" className="btn-ghost mt-2">
         Back to list

@@ -32,7 +32,7 @@ export function ErrorBox({ message }: { message: string }) {
 
 export function Empty({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <div className="card flex flex-col items-center gap-2 px-6 py-12 text-center text-muted [&_svg]:h-6 [&_svg]:w-6">
+    <div className="card flex flex-col items-center gap-2 px-6 py-12 text-center text-muted [&_svg]:h-5 [&_svg]:w-5">
       {icon}
       <div className="text-sm">{children}</div>
     </div>
@@ -43,8 +43,8 @@ export function PageHeader({ title, subtitle, right }: { icon?: ReactNode; title
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
+        <h1 className="text-[28px] font-medium leading-tight text-white">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-neutral-400">{subtitle}</p>}
       </div>
       {right}
     </div>
@@ -59,14 +59,46 @@ export function Flag({ code, className = "" }: { code: string | null | undefined
 
 export function RoleBadge({ role }: { role: Role }) {
   if (role === "player") return null;
-  return <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${ROLE_STYLE[role]}`}>{ROLE_LABEL[role]}</span>;
+  return <span className={`inline-flex h-6 items-center rounded-md border px-2 text-xs ${ROLE_STYLE[role]}`}>{ROLE_LABEL[role]}</span>;
 }
 
-export function PositionBadge({ position }: { position: number }) {
+/** List position like a scoreboard: "#01"; the top three carry the accent */
+export function PositionBadge({ position, className = "" }: { position: number; className?: string }) {
   return (
-    <span className={`w-12 shrink-0 text-center text-lg font-semibold tabular-nums ${position <= 3 ? "text-brand" : "text-neutral-400"}`}>
-      #{position}
+    <span className={`num w-10 shrink-0 text-sm ${position <= 3 ? "text-brand" : "text-neutral-500"} ${className}`}>
+      #{String(position).padStart(2, "0")}
     </span>
+  );
+}
+
+/** One cell of a spec strip: muted label over a mono figure */
+export function Spec({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="px-4 py-3">
+      <dt className="text-xs text-neutral-500">{label}</dt>
+      <dd className="num mt-1 text-base text-white">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * Signature detail: the Geometry Dash progress bar — a thin track with a mono percentage.
+ * Used only for "how much of something is done" (profile, packs, home).
+ */
+export function Progress({ value, total, label, className = "" }: { value: number; total: number; label?: string; className?: string }) {
+  const pct = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
+  return (
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <div className="flex items-baseline justify-between gap-3 text-xs">
+        {label ? <span className="text-neutral-400">{label}</span> : <span />}
+        <span className="num text-neutral-500">
+          <span className="text-white">{value}</span>/{total} · <span className="text-white">{pct}%</span>
+        </span>
+      </div>
+      <div className="h-1 overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
 

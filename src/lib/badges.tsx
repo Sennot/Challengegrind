@@ -65,7 +65,7 @@ export const useBadges = () => useContext(BadgesContext);
 export function CountBadge({ n, className = "" }: { n: number; className?: string }) {
   if (n <= 0) return null;
   return (
-    <span className={`grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none tabular-nums text-white ${className}`}>
+    <span className={`grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red-500 px-1 text-[11px] font-medium leading-none tabular-nums text-white ${className}`}>
       {n > 99 ? "99+" : n}
     </span>
   );

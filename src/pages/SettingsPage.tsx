@@ -84,7 +84,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <PageHeader title="Settings" subtitle={profile.username} />
       <div className="flex flex-col gap-4">
         <form onSubmit={saveProfile} className="card flex flex-col gap-4 p-5">

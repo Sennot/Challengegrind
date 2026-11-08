@@ -34,7 +34,7 @@ export default function ListPage() {
   }, [data, q]);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-5xl">
       <PageHeader
         title="Challenge list"
         subtitle={data ? `${data.length} levels${done.size ? ` · ${data.filter((l) => done.has(l.id)).length} completed` : ""}` : undefined}
@@ -53,9 +53,9 @@ export default function ListPage() {
       ) : levels.length === 0 ? (
         <Empty icon={<ListOrdered />}>{q ? "Nothing found" : "The list is empty"}</Empty>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="card divide-y divide-line overflow-hidden">
           {levels.map((l) => (
-            <LevelCard key={l.id} level={l} done={done.has(l.id)} />
+            <LevelRow key={l.id} level={l} done={done.has(l.id)} />
           ))}
         </div>
       )}
@@ -63,50 +63,27 @@ export default function ListPage() {
   );
 }
 
-function LevelCard({ level, done }: { level: Level; done: boolean }) {
+function LevelRow({ level, done }: { level: Level; done: boolean }) {
   const yt = youtubeId(level.video_url);
+  const fps = level.fps ? (/^\d+$/.test(level.fps) ? `${level.fps} FPS` : level.fps) : null;
   return (
-    <Link
-      to={`/level/${level.id}`}
-      className={`group relative flex items-center gap-3 overflow-hidden rounded-xl border bg-transparent p-3 transition-colors sm:gap-4 sm:p-4 ${
-        done ? "border-emerald-500/35 hover:border-emerald-400/60" : "border-line hover:border-neutral-600"
-      }`}
-    >
-      {/* Blurred verification thumbnail as the card cover */}
-      {yt && (
-        <img
-          src={ytThumb(yt)}
-          alt=""
-          loading="lazy"
-          aria-hidden
-          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-[3px] transition-opacity duration-300 group-hover:opacity-40"
-        />
-      )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-bg/90 via-bg/70 to-bg/40" />
-
-      <div className="relative flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-        <PositionBadge position={level.position} />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <h3 className="truncate text-base font-semibold text-white sm:text-lg">{level.name}</h3>
-            {done && <DoneCheck title="You completed this level" />}
-          </div>
-          <p className="truncate text-sm text-neutral-400">
-            {level.creator} <span className="text-neutral-600">·</span> verified by {level.verifier}
-            {level.fps && (
-              <>
-                {" "}
-                <span className="text-neutral-600">·</span> {level.fps}
-                {/^\d+$/.test(level.fps) ? " FPS" : ""}
-              </>
-            )}
-          </p>
-        </div>
-        <div className="shrink-0 text-right">
-          <div className="font-semibold tabular-nums text-white">{formatPoints(levelPoints(level.position))}</div>
-          <div className="text-xs text-neutral-500">points</div>
-        </div>
+    <Link to={`/level/${level.id}`} className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-surface-2">
+      <PositionBadge position={level.position} />
+      {/* frame from the verification video */}
+      <div className="hidden aspect-video w-24 shrink-0 overflow-hidden rounded-md bg-surface-2 sm:block">
+        {yt && <img src={ytThumb(yt)} alt="" loading="lazy" className="h-full w-full object-cover" />}
       </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="truncate text-base font-medium text-white">{level.name}</h3>
+          {done && <DoneCheck title="You completed this level" />}
+        </div>
+        <p className="mt-0.5 truncate text-sm text-neutral-400">
+          {level.creator} · verified by {level.verifier}
+          {fps && <span className="text-neutral-500"> · {fps}</span>}
+        </p>
+      </div>
+      <span className="num shrink-0 text-sm text-neutral-300">{formatPoints(levelPoints(level.position))}</span>
     </Link>
   );
 }

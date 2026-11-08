@@ -13,7 +13,7 @@ function AuthCard({ title, children }: { title: string; icon?: React.ReactNode; 
         <div className="mb-6 flex items-center gap-3">
           <img src="/logo.jpg" alt="" className="h-10 w-10 rounded-lg object-cover" />
           <div>
-            <h1 className="text-xl font-semibold text-white">{title}</h1>
+            <h1 className="text-xl font-medium text-white">{title}</h1>
             <p className="text-xs text-muted">ChallengeGrind</p>
           </div>
         </div>

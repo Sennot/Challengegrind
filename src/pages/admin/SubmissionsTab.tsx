@@ -68,7 +68,7 @@ function SubmissionCard({ s, levels, onDone }: { s: Pending; levels: ListLevel[]
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="font-semibold text-white">{s.name}</span>
+            <span className="font-medium text-white">{s.name}</span>
             <span className="text-xs text-muted">
               ID {s.gd_id} · {s.fps} FPS
             </span>
@@ -191,7 +191,7 @@ function AcceptDialog({ s, levels, onClose, onDone }: { s: Pending; levels: List
         transition={{ duration: 0.15 }}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-bold">Add "{s.name}" to the list</h2>
+          <h2 className="font-medium">Add "{s.name}" to the list</h2>
           <button onClick={onClose} disabled={busy} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-white" aria-label="Close">
             <X className="h-4 w-4" />
           </button>

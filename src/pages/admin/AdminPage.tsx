@@ -33,7 +33,7 @@ export default function AdminPage() {
   if (rank < 1) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-4xl">
       <PageHeader title="Admin panel" />
       <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line">
         {available.map((t) => {

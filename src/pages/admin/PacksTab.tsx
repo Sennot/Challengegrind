@@ -73,7 +73,7 @@ export default function PacksTab() {
                 <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: `${p.color}14` }}>
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold text-white">{p.name}</div>
+                    <div className="truncate font-medium text-white">{p.name}</div>
                     <div className="text-xs text-muted">
                       {p.levels.length} level{p.levels.length === 1 ? "" : "s"} · bonus {formatPoints(p.bonus_points)} pts
                     </div>
@@ -152,7 +152,7 @@ function PackEditor({
   return (
     <div className="card flex flex-col gap-4 p-4 sm:p-5" style={{ borderColor: `${d.color}80` }}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 font-bold">
+        <h2 className="flex items-center gap-2 font-medium">
           <Package className="h-4 w-4" style={{ color: d.color }} /> {d.id ? "Edit pack" : "New pack"}
         </h2>
         <PackBadge pack={{ name: d.name.trim() || "Pack name", color: d.color, bonus_points: Number(d.bonus) || 0 }} showBonus />
@@ -186,7 +186,7 @@ function PackEditor({
               key={c}
               type="button"
               onClick={() => setD({ ...d, color: c })}
-              className="grid h-8 w-8 place-items-center rounded-full transition-transform hover:scale-110"
+              className="grid h-8 w-8 place-items-center rounded-full transition-[box-shadow] hover:ring-2 hover:ring-white/20"
               style={{ backgroundColor: c, boxShadow: d.color.toLowerCase() === c ? `0 0 0 2px var(--color-surface), 0 0 0 4px ${c}` : undefined }}
               aria-label={c}
             >

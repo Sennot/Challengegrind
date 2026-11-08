@@ -16,9 +16,9 @@ export default function NotificationsPage() {
   if (!session) return <Navigate to="/login" replace />;
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div className="max-w-xl">
       <section className="card overflow-hidden">
-        <h1 className="flex items-center gap-2.5 border-b border-line px-4 py-4 text-lg font-semibold text-white">
+        <h1 className="flex items-center gap-2.5 border-b border-line px-4 py-4 text-lg font-medium text-white">
           <Bell className="h-5 w-5 text-brand" /> Notifications
         </h1>
         {error ? (

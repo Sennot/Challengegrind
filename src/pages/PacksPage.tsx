@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { motion } from "framer-motion";
-import { Check, ChevronDown, Package, Search, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Package, Search } from "lucide-react";
 import { useAsync } from "../lib/useAsync";
 import { useAuth } from "../lib/auth";
 import { fetchPacks, isPackDone, type Pack } from "../lib/packs";
 import { useMyCompletions } from "../lib/completions";
-import { formatPoints, levelPoints } from "../lib/points";
-import { Empty, ErrorBox, PageHeader, Spinner } from "../components/ui";
+import { formatBonus, formatPoints, levelPoints } from "../lib/points";
+import { Empty, ErrorBox, PageHeader, Progress, Spinner } from "../components/ui";
 
 type Filter = "all" | "done" | "progress" | "todo";
 type Sort = "hardest" | "bonus" | "newest";
@@ -48,8 +47,8 @@ export default function PacksPage() {
   const earned = completed.reduce((sum, p) => sum + p.bonus_points, 0);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <PageHeader title="Packs" subtitle="Beat every level of a pack to earn its bonus points." />
+    <div className="max-w-5xl">
+      <PageHeader title="Packs" subtitle="Beat every level of a pack to earn its bonus points" />
 
       {loading ? (
         <Spinner />
@@ -60,29 +59,23 @@ export default function PacksPage() {
       ) : (
         <>
           {profile && (
-            <div className="card mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 p-4">
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand/15 text-brand">
-                  <Sparkles className="h-5 w-5" />
-                </span>
-                <div>
-                  <div className="text-xs text-muted">Your packs</div>
-                  <div className="font-semibold tabular-nums text-white">
-                    {completed.length} <span className="font-normal text-muted">/ {data.length} completed</span>
-                  </div>
+            <div className="card mb-6 grid gap-6 p-5 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-end sm:gap-10">
+              <div>
+                <div className="text-xs text-neutral-500">Your packs</div>
+                <div className="num mt-1 text-2xl text-white">
+                  {completed.length}
+                  <span className="text-base text-neutral-500">/{data.length}</span>
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted">Bonus earned</div>
-                <div className="font-semibold tabular-nums text-white">+{formatPoints(earned)} pts</div>
+                <div className="text-xs text-neutral-500">Bonus earned</div>
+                <div className="num mt-1 text-2xl text-white">{formatBonus(earned)}</div>
               </div>
-              <div className="h-2 min-w-40 flex-1 overflow-hidden rounded-full bg-surface-3">
-                <div className="h-full rounded-full bg-brand transition-[width] duration-500" style={{ width: `${(completed.length / data.length) * 100}%` }} />
-              </div>
+              <Progress value={completed.length} total={data.length} />
             </div>
           )}
 
-          <div className="mb-4 flex flex-col gap-2.5 sm:flex-row">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <input className="input pl-9" placeholder="Find a pack or level" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -95,19 +88,19 @@ export default function PacksPage() {
           </div>
 
           {profile && (
-            <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+            <div className="-mx-4 mb-6 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
               {FILTERS.map((f) => {
                 const n = f.id === "all" ? data.length : data.filter((p) => stateOf(p, done) === f.id).length;
                 return (
                   <button
                     key={f.id}
                     onClick={() => setFilter(f.id)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                      filter === f.id ? "border-brand/50 bg-brand/10 text-white" : "border-line text-muted hover:text-white"
+                    className={`flex h-8 shrink-0 items-center gap-2 rounded-lg px-3 text-sm transition-colors ${
+                      filter === f.id ? "bg-surface-3 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" : "text-neutral-400 hover:bg-surface-2 hover:text-white"
                     }`}
                   >
                     {f.label}
-                    <span className="tabular-nums text-xs text-muted">{n}</span>
+                    <span className="num text-xs text-neutral-500">{n}</span>
                   </button>
                 );
               })}
@@ -117,9 +110,9 @@ export default function PacksPage() {
           {packs.length === 0 ? (
             <Empty icon={<Package />}>Nothing found</Empty>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {packs.map((p, i) => (
-                <PackCard key={p.id} pack={p} done={done} showProgress={Boolean(profile)} index={i} />
+            <div className="grid items-start gap-4 md:grid-cols-2">
+              {packs.map((p) => (
+                <PackCard key={p.id} pack={p} done={done} showProgress={Boolean(profile)} />
               ))}
             </div>
           )}
@@ -129,79 +122,52 @@ export default function PacksPage() {
   );
 }
 
-function PackCard({ pack, done, showProgress, index }: { pack: Pack; done: ReadonlySet<number>; showProgress: boolean; index: number }) {
+function PackCard({ pack, done, showProgress }: { pack: Pack; done: ReadonlySet<number>; showProgress: boolean }) {
   const [open, setOpen] = useState(false);
   const have = pack.levels.filter((l) => done.has(l.id)).length;
   const complete = isPackDone(pack, done);
   const total = pack.levels.length;
   const shown = open ? pack.levels : pack.levels.slice(0, PREVIEW);
-  const c = pack.color;
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.03 }}
-      className="relative flex flex-col overflow-hidden rounded-xl border bg-surface"
-      style={{ borderColor: complete ? `${c}99` : `${c}40`, boxShadow: complete ? `0 0 24px -8px ${c}80` : undefined }}
-    >
-      {/* Colored header */}
-      <div className="relative px-4 pb-3 pt-4" style={{ background: `linear-gradient(135deg, ${c}33 0%, ${c}0d 55%, transparent 100%)` }}>
+    <article className="card flex flex-col overflow-hidden">
+      <header className="flex flex-col gap-4 px-5 pb-4 pt-5">
         <div className="flex items-start gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: `${c}26`, color: c }}>
-            <Package className="h-5 w-5" />
-          </span>
+          {/* the pack color is only this dot */}
+          <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: pack.color }} />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-semibold leading-tight text-white">{pack.name}</h2>
-            <p className="mt-0.5 text-xs text-muted">
+            <h2 className="flex items-center gap-2 text-lg font-medium leading-tight text-white">
+              <span className="truncate">{pack.name}</span>
+              {complete && <Check className="h-4 w-4 shrink-0 text-emerald-400" strokeWidth={2.5} aria-label="Completed" />}
+            </h2>
+            <p className="mt-1 text-xs text-neutral-500">
               {total} level{total === 1 ? "" : "s"}
               {total > 0 && <> · hardest #{pack.levels[0].position}</>}
             </p>
           </div>
           {pack.bonus_points > 0 && (
             <div className="shrink-0 text-right">
-              <div className="text-lg font-semibold tabular-nums leading-tight" style={{ color: c }}>
-                +{formatPoints(pack.bonus_points)}
-              </div>
-              <div className="text-[11px] text-muted">bonus pts</div>
+              <div className="num text-lg leading-tight text-white">{formatBonus(pack.bonus_points)}</div>
+              <div className="text-xs text-neutral-500">bonus pts</div>
             </div>
           )}
         </div>
+        {showProgress && <Progress value={have} total={total} />}
+      </header>
 
-        {showProgress && (
-          <div className="mt-3 flex items-center gap-2.5">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/40">
-              <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${total ? (have / total) * 100 : 0}%`, backgroundColor: c }} />
-            </div>
-            {complete ? (
-              <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300">
-                <Check className="h-3.5 w-3.5" strokeWidth={3} /> Completed
-              </span>
-            ) : (
-              <span className="text-xs tabular-nums text-muted">
-                {have}/{total}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Levels */}
       <ul className="flex-1 divide-y divide-line border-t border-line">
         {shown.map((l) => {
           const got = done.has(l.id);
           return (
             <li key={l.id}>
-              <Link to={`/level/${l.id}`} className="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-surface-2">
-                <span className="w-9 shrink-0 tabular-nums text-muted">#{l.position}</span>
+              <Link to={`/level/${l.id}`} className="flex h-10 items-center gap-3 px-5 text-sm transition-colors hover:bg-surface-2">
+                <span className="num w-9 shrink-0 text-xs text-neutral-500">#{l.position}</span>
                 <span className={`min-w-0 flex-1 truncate ${got ? "text-white" : "text-neutral-300"}`}>{l.name}</span>
-                <span className="hidden shrink-0 text-xs tabular-nums text-neutral-500 sm:inline">{formatPoints(levelPoints(l.position))}</span>
+                <span className="num hidden shrink-0 text-xs text-neutral-500 sm:inline">{formatPoints(levelPoints(l.position))}</span>
                 {got ? (
-                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-500 text-black" title="Completed">
-                    <Check className="h-3 w-3" strokeWidth={3} />
-                  </span>
+                  <Check className="h-4 w-4 shrink-0 text-emerald-400" strokeWidth={2.5} aria-label="Completed" />
                 ) : (
-                  showProgress && <span className="h-5 w-5 shrink-0 rounded-full border border-neutral-700" />
+                  showProgress && <span className="h-4 w-4 shrink-0" />
                 )}
               </Link>
             </li>
@@ -212,12 +178,12 @@ function PackCard({ pack, done, showProgress, index }: { pack: Pack; done: Reado
       {total > PREVIEW && (
         <button
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center justify-center gap-1.5 border-t border-line py-2 text-xs text-muted transition-colors hover:bg-surface-2 hover:text-white"
+          className="flex h-10 items-center justify-center gap-1.5 border-t border-line text-xs text-neutral-400 transition-colors hover:bg-surface-2 hover:text-white"
         >
           {open ? "Show less" : `Show all ${total} levels`}
           <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       )}
-    </motion.article>
+    </article>
   );
 }

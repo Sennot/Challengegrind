@@ -28,7 +28,7 @@ export function NotificationItem({ n, unread, onClick }: { n: AppNotification; u
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold text-white">{n.title}</span>
+          <span className="truncate text-sm font-medium text-white">{n.title}</span>
           {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" aria-label="unread" />}
         </span>
         {n.body && <span className="mt-0.5 block break-words text-sm text-neutral-300">{n.body}</span>}
@@ -133,7 +133,7 @@ function DropdownList({ onNavigate }: { onNavigate: () => void }) {
     <>
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
         <Bell className="h-4 w-4 text-brand" />
-        <span className="font-semibold text-white">Notifications</span>
+        <span className="font-medium text-white">Notifications</span>
       </div>
       <div className="max-h-[60vh] overflow-y-auto">
         {error ? (

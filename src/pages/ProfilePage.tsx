@@ -1,17 +1,16 @@
 import { Link, useParams } from "react-router";
-import { motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { BadgeCheck, Ban, Package, Settings, Trophy } from "lucide-react";
+import { Ban, Settings } from "lucide-react";
 import { supabase, errorText } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
 import { useAuth } from "../lib/auth";
 import type { LeaderboardRow, Level, Profile, RecordRow } from "../lib/types";
-import { formatPoints, levelPoints } from "../lib/points";
+import { formatBonus, formatPoints, levelPoints } from "../lib/points";
 import { countryName } from "../lib/countries";
 import { formatDate, timeAgo } from "../lib/time";
 import { fetchPacks, isPackDone, type Pack } from "../lib/packs";
 import { PackBadge } from "../components/PackBadge";
-import { Empty, ErrorBox, Flag, RoleBadge, STATUS, SocialLinks, Spinner, VideoLink } from "../components/ui";
+import { Empty, ErrorBox, Flag, PositionBadge, Progress, RoleBadge, STATUS, Spec, SocialLinks, Spinner, VideoLink } from "../components/ui";
 
 type LevelRef = Pick<Level, "id" | "name" | "position">;
 type RecordWithLevel = RecordRow & { level: LevelRef };
@@ -41,15 +40,17 @@ export default function ProfilePage() {
       const guest = must(stats) as LeaderboardRow | null;
       return guest ? { guest, verified: must(verified) as LevelRef[], packs } : null;
     }
-    const [stats, records, verified, packs] = await Promise.all([
+    const [stats, records, verified, packs, total] = await Promise.all([
       supabase.from("leaderboard").select("*").eq("id", profile.id).maybeSingle(),
       // RLS: others see only approved records; the owner (and staff) also see pending/rejected
       supabase.from("records").select("*, level:levels(id, name, position)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("levels").select("id, name, position").eq("verifier_id", profile.id).order("position"),
       fetchPacks(),
+      supabase.from("levels").select("id", { count: "exact", head: true }),
     ]);
     return {
       profile,
+      totalLevels: total.count ?? 0,
       stats: must(stats) as LeaderboardRow | null,
       records: must(records) as unknown as RecordWithLevel[],
       verified: must(verified) as LevelRef[],
@@ -62,7 +63,7 @@ export default function ProfilePage() {
   if (!data) return <Empty>Player not found</Empty>;
   if (data.guest) return <GuestProfile row={data.guest} verified={data.verified} packs={data.packs} />;
 
-  const { profile, stats, records, verified, packs } = data;
+  const { profile, stats, records, verified, packs, totalLevels } = data;
   const isMe = me?.id === profile.id;
   // Verifications count as completions too
   const completed = mergeLevels(records.filter((r) => r.status === "approved").map((r) => r.level), verified);
@@ -79,17 +80,17 @@ export default function ProfilePage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex max-w-4xl flex-col gap-4">
       {/* Header */}
       <div className="card p-5 sm:p-6">
-        <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
           <Flag code={profile.country} className="text-5xl" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <h1 className="truncate text-2xl font-semibold tracking-tight text-white">{profile.username}</h1>
+              <h1 className="truncate text-[28px] font-medium leading-tight text-white">{profile.username}</h1>
               <RoleBadge role={profile.role} />
             </div>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-neutral-400">
               {profile.country ? countryName(profile.country) : "No country set"} · joined {formatDate(profile.created_at)}
             </p>
             {profile.bio && <p className="mt-3 whitespace-pre-line text-sm text-neutral-300">{profile.bio}</p>}
@@ -111,27 +112,29 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <Stat label="Rank" value={stats ? `#${stats.rank}` : "—"} />
-          <Stat label="Points" value={stats ? formatPoints(stats.points) : "0"} />
-          <Stat label="Completed" value={String(completed.length)} />
-          <Stat label="Verifications" value={String(verified.length)} />
-        </div>
+        <dl className="mt-6 grid grid-cols-2 rounded-xl border border-line sm:grid-cols-4 sm:divide-x sm:divide-line">
+          <Spec label="Rank" value={stats ? `#${stats.rank}` : "—"} />
+          <Spec label="Points" value={stats ? formatPoints(stats.points) : formatPoints(0)} />
+          <Spec label="Completed" value={completed.length} />
+          <Spec label="Verifications" value={verified.length} />
+        </dl>
+        {totalLevels > 0 && <Progress className="mt-5" value={completed.length} total={totalLevels} label="Levels of the list completed" />}
 
         {hardest && (
-          <Link to={`/level/${hardest.id}`} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
-            <div>
-              <div className="text-xs text-muted">Hardest level</div>
-              <div className="mt-0.5 font-medium text-white">
-                <span className="text-brand">#{hardest.position}</span> {hardest.name}
+          <Link to={`/level/${hardest.id}`} className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-line px-4 py-3 transition-colors hover:bg-surface-2">
+            <div className="min-w-0">
+              <div className="text-xs text-neutral-500">Hardest level</div>
+              <div className="mt-1 flex min-w-0 items-baseline gap-2 font-medium text-white">
+                <PositionBadge position={hardest.position} className="w-auto" />
+                <span className="truncate">{hardest.name}</span>
               </div>
             </div>
-            <span className="text-sm tabular-nums text-muted">{formatPoints(levelPoints(hardest.position))}</span>
+            <span className="num shrink-0 text-sm text-neutral-400">{formatPoints(levelPoints(hardest.position))}</span>
           </Link>
         )}
 
-        <div className="mt-2.5 flex flex-col gap-2.5">
-          <LevelChips title="Completed levels" icon={<Trophy className="h-4 w-4 text-brand" />} levels={completed}>
+        <div className="mt-6 flex flex-col gap-6">
+          <LevelChips title="Completed levels" levels={completed}>
             {isMe ? (
               <>
                 You haven't completed any challenges yet.{" "}
@@ -143,7 +146,7 @@ export default function ProfilePage() {
               "No completed challenges yet"
             )}
           </LevelChips>
-          {verified.length > 0 && <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified />}
+          {verified.length > 0 && <LevelChips title="Verified" levels={verified} />}
           <CompletedPacks packs={donePacks} bonus={stats?.pack_bonus ?? 0} />
         </div>
       </div>
@@ -151,9 +154,9 @@ export default function ProfilePage() {
       {/* Own pending / rejected submissions (RLS hides them from others) */}
       {isMe && submissions.length > 0 && (
         <section className="card">
-          <h2 className="flex items-center justify-between border-b border-line px-4 py-3 text-sm font-medium text-muted">
-            <span>My submissions</span>
-            <span className="tabular-nums">{submissions.length}</span>
+          <h2 className="flex items-baseline gap-2 border-b border-line px-4 py-3 text-sm font-medium text-white">
+            My submissions
+            <span className="num text-xs text-neutral-500">{submissions.length}</span>
           </h2>
           <div className="divide-y divide-line">
             {submissions.map((r) => {
@@ -163,7 +166,7 @@ export default function ProfilePage() {
                 <div key={r.id} className="px-4 py-2.5">
                   <div className="flex items-center gap-3">
                     <Link to={`/level/${r.level.id}`} className="min-w-0 flex-1 truncate text-sm">
-                      <span className="tabular-nums text-muted">#{r.level.position}</span> <span className="font-medium text-white hover:text-brand">{r.level.name}</span>
+                      <span className="num text-xs text-neutral-500">#{r.level.position}</span> <span className="font-medium text-white hover:text-brand">{r.level.name}</span>
                     </Link>
                     <span className="hidden text-xs text-neutral-600 sm:inline">{timeAgo(r.created_at)}</span>
                     <span className={`flex items-center gap-1 text-xs ${s.cls}`} title={s.label}>
@@ -184,23 +187,22 @@ export default function ProfilePage() {
           </div>
         </section>
       )}
-    </motion.div>
+    </div>
   );
 }
 
-/** Box of level-name chips, hardest first; `children` is shown when the list is empty */
-function LevelChips({ title, icon, levels, verified, children }: { title: string; icon: ReactNode; levels: LevelRef[]; verified?: boolean; children?: ReactNode }) {
+/** Level-name chips, hardest first; `children` is shown when the list is empty */
+function LevelChips({ title, levels, children }: { title: string; levels: LevelRef[]; children?: ReactNode }) {
   return (
-    <section className={`rounded-lg border p-3 ${verified ? "border-emerald-500/25 bg-emerald-500/[0.06]" : "border-line bg-surface-2"}`}>
-      <h2 className="mb-2.5 flex items-center gap-2 text-sm font-medium text-white">
-        {icon}
-        <span className="flex-1">{title}</span>
-        <span className="rounded-md bg-surface-3 px-1.5 text-xs tabular-nums text-muted">{levels.length}</span>
+    <section>
+      <h2 className="mb-3 flex items-baseline gap-2 text-sm font-medium text-white">
+        {title}
+        <span className="num text-xs text-neutral-500">{levels.length}</span>
       </h2>
       {levels.length === 0 ? (
-        <p className="text-sm text-muted">{children}</p>
+        <p className="text-sm text-neutral-500">{children}</p>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {[...levels]
             .sort((a, b) => a.position - b.position)
             .map((l) => (
@@ -208,10 +210,9 @@ function LevelChips({ title, icon, levels, verified, children }: { title: string
                 key={l.id}
                 to={`/level/${l.id}`}
                 title={`#${l.position}`}
-                className={`rounded-md border px-2.5 py-1 text-sm transition-colors ${
-                  verified ? "border-emerald-500/50 text-emerald-200 hover:border-emerald-400 hover:text-white" : "border-line text-neutral-200 hover:border-neutral-600 hover:text-white"
-                }`}
+                className="flex h-8 items-center gap-2 rounded-md border border-line bg-surface-2 px-2.5 text-sm text-neutral-200 transition-colors hover:border-neutral-600 hover:text-white"
               >
+                <span className="num text-xs text-neutral-500">#{l.position}</span>
                 {l.name}
               </Link>
             ))}
@@ -225,14 +226,13 @@ function LevelChips({ title, icon, levels, verified, children }: { title: string
 function CompletedPacks({ packs, bonus }: { packs: Pack[]; bonus: number }) {
   if (!packs.length) return null;
   return (
-    <section className="rounded-lg border border-line bg-surface-2 p-3">
-      <h2 className="mb-2.5 flex items-center gap-2 text-sm font-medium text-white">
-        <Package className="h-4 w-4 text-brand" />
-        <span className="flex-1">Completed packs</span>
-        {bonus > 0 && <span className="text-xs tabular-nums text-muted">+{formatPoints(bonus)} pts</span>}
-        <span className="rounded-md bg-surface-3 px-1.5 text-xs tabular-nums text-muted">{packs.length}</span>
+    <section>
+      <h2 className="mb-3 flex items-baseline gap-2 text-sm font-medium text-white">
+        Completed packs
+        <span className="num text-xs text-neutral-500">{packs.length}</span>
+        {bonus > 0 && <span className="num ml-auto text-xs text-neutral-400">{formatBonus(bonus)} pts</span>}
       </h2>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {packs.map((p) => (
           <PackBadge key={p.id} pack={p} done showBonus />
         ))}
@@ -245,48 +245,40 @@ function GuestProfile({ row, verified, packs }: { row: LeaderboardRow; verified:
   const hardest = verified[0];
   const done = new Set(verified.map((l) => l.id));
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex max-w-4xl flex-col gap-4">
       <div className="card p-5 sm:p-6">
         <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
           <Flag code={null} className="text-5xl" />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-2xl font-semibold tracking-tight text-white">{row.username}</h1>
+            <h1 className="truncate text-[28px] font-medium leading-tight text-white">{row.username}</h1>
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <Stat label="Rank" value={`#${row.rank}`} />
-          <Stat label="Points" value={formatPoints(row.points)} />
-          <Stat label="Completed" value={String(verified.length)} />
-          <Stat label="Verifications" value={String(row.verifications)} />
-        </div>
+        <dl className="mt-6 grid grid-cols-2 rounded-xl border border-line sm:grid-cols-4 sm:divide-x sm:divide-line">
+          <Spec label="Rank" value={`#${row.rank}`} />
+          <Spec label="Points" value={formatPoints(row.points)} />
+          <Spec label="Completed" value={verified.length} />
+          <Spec label="Verifications" value={row.verifications} />
+        </dl>
         {hardest && (
-          <Link to={`/level/${hardest.id}`} className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3 transition-colors hover:border-neutral-600">
-            <div>
-              <div className="text-xs text-muted">Hardest level</div>
-              <div className="mt-0.5 font-medium text-white">
-                <span className="text-brand">#{hardest.position}</span> {hardest.name}
+          <Link to={`/level/${hardest.id}`} className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-line px-4 py-3 transition-colors hover:bg-surface-2">
+            <div className="min-w-0">
+              <div className="text-xs text-neutral-500">Hardest level</div>
+              <div className="mt-1 flex min-w-0 items-baseline gap-2 font-medium text-white">
+                <PositionBadge position={hardest.position} className="w-auto" />
+                <span className="truncate">{hardest.name}</span>
               </div>
             </div>
-            <span className="text-sm tabular-nums text-muted">{formatPoints(levelPoints(hardest.position))}</span>
+            <span className="num shrink-0 text-sm text-neutral-400">{formatPoints(levelPoints(hardest.position))}</span>
           </Link>
         )}
-        <div className="mt-2.5 flex flex-col gap-2.5">
+        <div className="mt-6 flex flex-col gap-6">
           {/* Players without an account only have verifications, so one box says it all */}
-          <LevelChips title="Verified" icon={<BadgeCheck className="h-4 w-4 text-emerald-400" />} levels={verified} verified>
+          <LevelChips title="Verified" levels={verified}>
             No completed challenges yet
           </LevelChips>
           <CompletedPacks packs={packs.filter((p) => isPackDone(p, done))} bonus={row.pack_bonus} />
         </div>
       </div>
-    </motion.div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-line bg-surface-2 px-3 py-2.5">
-      <div className="text-xs text-muted">{label}</div>
-      <div className="mt-0.5 font-semibold tabular-nums text-white">{value}</div>
     </div>
   );
 }

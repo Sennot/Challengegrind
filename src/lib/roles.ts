@@ -10,10 +10,11 @@ export const ROLE_LABEL: Record<Role, string> = {
   owner: "Owner",
 };
 
+/** Quiet text tags; only the owner carries the accent */
 export const ROLE_STYLE: Record<Role, string> = {
   player: "border-line text-muted",
-  helper: "border-line text-sky-300",
-  moderator: "border-line text-violet-300",
-  admin: "border-line text-brand-2",
+  helper: "border-line text-neutral-400",
+  moderator: "border-line text-neutral-300",
+  admin: "border-line text-white",
   owner: "border-brand/40 text-brand",
 };

@@ -12,7 +12,7 @@ function SiteDown() {
     <main className="grid min-h-dvh place-items-center px-4 text-center">
       <div className="flex flex-col items-center gap-4">
         <img src="/logo.jpg" alt="" className="h-16 w-16 rounded-2xl" />
-        <h1 className="text-3xl font-extrabold text-white sm:text-4xl">Site is down</h1>
+        <h1 className="text-3xl font-medium text-white sm:text-4xl">Site is down</h1>
         <p className="max-w-sm text-sm text-muted">ChallengeGrind is being updated. We'll be back soon.</p>
       </div>
     </main>

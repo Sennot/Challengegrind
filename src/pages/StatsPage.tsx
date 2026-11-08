@@ -27,7 +27,7 @@ export default function StatsPage() {
   }, [data, q, country]);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-5xl">
       <PageHeader title="Stats Viewer" />
 
       <div className="mb-4 flex flex-col gap-2.5 sm:flex-row">
@@ -53,7 +53,7 @@ export default function StatsPage() {
         <Empty icon={<Trophy />}>No players with points yet</Empty>
       ) : (
         <div className="card overflow-hidden">
-          <div className="hidden grid-cols-[3.5rem_1fr_6rem_5rem_minmax(0,1fr)] gap-4 border-b border-line px-4 py-2.5 text-xs text-muted md:grid">
+          <div className="hidden grid-cols-[3.5rem_1fr_6rem_5rem_minmax(0,1fr)] gap-4 border-b border-line px-4 py-3 text-xs text-neutral-500 md:grid">
             <span>#</span>
             <span>Player</span>
             <span className="text-right">Points</span>
@@ -65,16 +65,16 @@ export default function StatsPage() {
               <Link
                 key={r.id ?? `guest:${r.username}`}
                 to={`/player/${encodeURIComponent(r.username)}`}
-                className="grid grid-cols-[2.75rem_1fr_auto] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2 md:grid-cols-[3.5rem_1fr_6rem_5rem_minmax(0,1fr)] md:gap-4"
+                className="grid h-12 grid-cols-[2.75rem_1fr_auto] items-center gap-3 px-4 transition-colors hover:bg-surface-2 md:grid-cols-[3.5rem_1fr_6rem_5rem_minmax(0,1fr)] md:gap-4"
               >
-                <span className={`tabular-nums font-semibold ${r.rank <= 3 ? "text-brand" : "text-neutral-500"}`}>{r.rank}</span>
+                <span className={`num text-sm ${r.rank <= 3 ? "text-brand" : "text-neutral-500"}`}>{r.rank}</span>
                 <span className="flex min-w-0 items-center gap-2.5">
                   <Flag code={r.country} />
-                  <span className="truncate text-sm font-medium text-white">{r.username}</span>
+                  <span className="truncate text-sm text-white">{r.username}</span>
                 </span>
-                <span className="text-right text-sm font-semibold tabular-nums text-white">{formatPoints(r.points)}</span>
-                <span className="hidden text-right text-sm tabular-nums text-muted md:block">{r.completions}</span>
-                <span className="hidden truncate text-sm text-muted md:block">
+                <span className="num text-right text-sm text-white">{formatPoints(r.points)}</span>
+                <span className="num hidden text-right text-sm text-neutral-400 md:block">{r.completions}</span>
+                <span className="hidden truncate text-sm text-neutral-400 md:block">
                   #{r.hardest_position} {r.hardest_name}
                 </span>
               </Link>

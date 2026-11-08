@@ -16,7 +16,7 @@ export default function SubmitPage() {
   if (authLoading) return <Spinner />;
   if (!session || !profile) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="max-w-xl">
         <PageHeader title="Submit a record" />
         <div className="card flex flex-col items-center gap-4 p-8 text-center">
           <p className="text-sm text-muted">You need an account to submit records.</p>
@@ -30,7 +30,7 @@ export default function SubmitPage() {
   }
   if (profile.banned) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="max-w-xl">
         <PageHeader title="Submit a record" />
         <ErrorBox message={`Your account is banned${profile.ban_reason ? `: ${profile.ban_reason}` : ""}. You can't submit records.`} />
       </div>
@@ -75,7 +75,7 @@ function SubmitForm({ username }: { username: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div className="max-w-xl">
       <PageHeader title="Submit a record" />
 
       <form onSubmit={submit} className="card flex flex-col gap-4 p-5">

@@ -115,7 +115,7 @@ export default function LevelsTab() {
   return (
     <div className="flex flex-col gap-6">
       <form onSubmit={add} className="card flex flex-col gap-4 p-5">
-        <h2 className="flex items-center gap-2 font-bold">
+        <h2 className="flex items-center gap-2 font-medium">
           <Plus className="h-4 w-4 text-brand" /> Add level
         </h2>
         <DraftFields d={draft} set={setDraft} />
@@ -154,7 +154,7 @@ export default function LevelsTab() {
               <div key={l.id} className="card flex items-center gap-3 p-3">
                 <PositionBadge position={l.position} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">{l.name}</div>
+                  <div className="truncate font-medium">{l.name}</div>
                   <div className="truncate text-xs text-muted">
                     {l.creator} · verifier {l.verifier}
                   </div>

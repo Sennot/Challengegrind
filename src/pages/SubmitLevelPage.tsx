@@ -32,7 +32,7 @@ export default function SubmitLevelPage() {
   if (authLoading) return <Spinner />;
   if (!session || !profile) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="max-w-xl">
         <PageHeader title={TITLE} />
         <div className="card flex flex-col items-center gap-4 p-8 text-center">
           <p className="text-sm text-muted">You need an account to submit levels.</p>
@@ -46,7 +46,7 @@ export default function SubmitLevelPage() {
   }
   if (profile.banned) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="max-w-xl">
         <PageHeader title={TITLE} />
         <ErrorBox message={`Your account is banned${profile.ban_reason ? `: ${profile.ban_reason}` : ""}. You can't submit levels.`} />
       </div>
@@ -131,7 +131,7 @@ function SubmitLevelForm({ profile }: { profile: Profile }) {
   );
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div className="max-w-xl">
       <PageHeader title={TITLE} />
 
       <form onSubmit={submit} className="card flex flex-col gap-4 p-5">

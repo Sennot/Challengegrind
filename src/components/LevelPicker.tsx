@@ -113,7 +113,7 @@ export default function LevelPicker({ levels, value, onChange }: { levels: PickL
                 role="option"
                 aria-selected={l.id === value}
               >
-                <span className="w-10 shrink-0 tabular-nums text-muted">#{l.position}</span>
+                <span className="num w-10 shrink-0 text-xs text-neutral-500">#{l.position}</span>
                 <Thumb l={l} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium text-white">{l.name}</span>

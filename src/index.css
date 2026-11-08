@@ -1,15 +1,37 @@
 @import "tailwindcss";
 
+/* Graphite ramp, one accent (the orange of the logo). Color lives in the content, not in the chrome. */
 @theme {
-  --color-bg: #0c0c0e;
-  --color-surface: #141417;
-  --color-surface-2: #1b1b1f;
-  --color-surface-3: #25252a;
-  --color-line: #26262b;
-  --color-muted: #8e8e98;
+  --color-bg: #121213;
+  --color-surface: #18181a;
+  --color-surface-2: #1f1f22;
+  --color-surface-3: #29292c;
+  --color-line: rgb(237 237 237 / 0.08);
+  --color-muted: #8a8a90;
   --color-brand: #f27a1a;
-  --color-brand-2: #f59a4a;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-2: #f5934a;
+
+  /* text roles: white = primary, neutral-400 = secondary, muted / neutral-500 = meta */
+  --color-white: #ededed;
+  --color-neutral-100: #ededed;
+  --color-neutral-200: #e2e2e4;
+  --color-neutral-300: #c4c4c8;
+  --color-neutral-400: #a1a1a6;
+  --color-neutral-500: #8a8a90;
+  --color-neutral-600: #5e5e64;
+  --color-neutral-700: #3a3a3e;
+
+  --color-emerald-300: #7ad3a8;
+  --color-emerald-400: #4cc38a;
+  --color-emerald-500: #3fae79;
+  --color-red-300: #f19396;
+  --color-red-400: #e5484d;
+  --color-red-500: #e5484d;
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
@@ -26,26 +48,39 @@
     scrollbar-width: thin;
     scrollbar-color: var(--color-surface-3) transparent;
   }
+  :focus-visible {
+    outline: 2px solid rgb(242 122 26 / 0.7);
+    outline-offset: 2px;
+  }
 }
 
 @utility card {
   @apply rounded-xl border border-line bg-surface;
 }
+/* Figures: positions, points, counts — read like a scoreboard */
+@utility num {
+  @apply font-mono tabular-nums;
+}
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50;
+  @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-brand text-black hover:bg-brand-2;
+  @apply btn bg-neutral-100 text-bg shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white;
 }
 @utility btn-ghost {
-  @apply btn border border-line bg-surface-2 text-neutral-200 hover:bg-surface-3;
+  @apply btn border border-line bg-surface-2 text-neutral-100 hover:bg-surface-3;
 }
 @utility btn-danger {
   @apply btn border border-red-500/25 bg-transparent text-red-400 hover:bg-red-500/10;
 }
 @utility input {
-  @apply w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-neutral-100 outline-none transition-colors placeholder:text-neutral-500 focus:border-brand/60;
+  @apply h-9 w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-neutral-100 outline-none transition-colors placeholder:text-neutral-500 focus:border-neutral-500;
 }
 @utility label {
-  @apply mb-1.5 block text-xs font-medium text-muted;
+  @apply mb-2 block text-xs text-muted;
+}
+
+/* One stroke for every line icon; explicit stroke widths (checks) stay as set */
+svg.lucide[stroke-width="2"] {
+  stroke-width: 1.5;
 }

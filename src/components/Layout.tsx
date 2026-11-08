@@ -14,7 +14,7 @@ function Logo() {
     <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="ChallengeGrind">
       <img src="/logo.jpg" alt="" className="h-8 w-8 rounded-lg object-cover" />
       {/* hidden on phones: the bell and a long nickname need the room */}
-      <span className="hidden text-[15px] font-semibold tracking-tight text-white sm:inline">ChallengeGrind</span>
+      <span className="hidden text-base font-medium text-white sm:inline">ChallengeGrind</span>
     </Link>
   );
 }
@@ -27,14 +27,14 @@ function SideLink({ item, onClick, badge = 0 }: { item: NavItem; onClick?: () =>
       end={item.to === "/"}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-          isActive ? "bg-surface-2 font-medium text-white" : "text-muted hover:bg-surface-2/60 hover:text-neutral-100"
+        `flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors ${
+          isActive ? "bg-surface-2 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" : "text-neutral-400 hover:bg-surface-2/60 hover:text-white"
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <Icon className={`h-4 w-4 ${isActive ? "text-brand" : ""}`} />
+          <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-brand" : "text-neutral-500"}`} />
           <span className="flex-1">{item.label}</span>
           <CountBadge n={badge} />
         </>
@@ -48,7 +48,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { pendingRecords, pendingLevels } = useBadges();
   const group = (title: string, items: NavItem[]) => (
     <div className="flex flex-col gap-0.5">
-      <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-neutral-500">{title}</div>
+      <div className="px-3 pb-2 text-xs text-neutral-500">{title}</div>
       {items.map((i) => (
         <SideLink key={i.to} item={i} onClick={onNavigate} badge={i === NAV_ADMIN ? pendingRecords + pendingLevels : 0} />
       ))}
@@ -76,7 +76,7 @@ function UserMenu() {
 
   if (!session || !profile) {
     return (
-      <Link to="/login" className="btn-primary !px-3 !py-1.5">
+      <Link to="/login" className="btn-primary h-8 !px-3">
         <LogIn className="h-4 w-4" /> Log in
       </Link>
     );
@@ -87,7 +87,7 @@ function UserMenu() {
     <div ref={ref} className="relative min-w-0">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex min-w-0 max-w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-surface-2 sm:px-2.5"
+        className="flex h-8 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 text-sm transition-colors hover:bg-surface-2 sm:px-2.5"
         title={profile.username}
       >
         <Flag code={profile.country} />
@@ -100,8 +100,8 @@ function UserMenu() {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="card absolute right-0 mt-1.5 w-48 p-1 shadow-lg shadow-black/40"
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className="card absolute right-0 mt-2 w-48 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
           >
             <div className="truncate border-b border-line px-3 pb-2 pt-1.5 text-xs text-muted">{profile.username}</div>
             <Link onClick={() => setOpen(false)} to={`/player/${profile.username}`} className={item}>
@@ -183,7 +183,7 @@ function Shell() {
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
+              transition={{ type: "tween", duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="flex items-center justify-between">
                 <Logo />
@@ -200,17 +200,17 @@ function Shell() {
       </AnimatePresence>
 
       <div className="mx-auto flex max-w-[1280px] gap-8 px-4">
-        <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto py-6 lg:block">
+        <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto py-8 lg:block">
           <SidebarContent />
         </aside>
 
-        <main className="min-w-0 flex-1 py-6 pb-16">
+        <main className="min-w-0 flex-1 py-8 pb-16">
           {!supabaseConfigured && (
             <div className="mb-6 rounded-lg border border-brand/30 p-3.5 text-sm text-brand-2">
               Supabase is not configured: create <code>.env</code> from <code>.env.example</code> and restart the dev server.
             </div>
           )}
-          <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+          <motion.div key={location.pathname} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}>
             <Outlet />
           </motion.div>
         </main>
