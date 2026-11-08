@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 
 /** Maintenance mode: true shows only the "Site is down" page and never touches the database. */
-const MAINTENANCE = true;
+const MAINTENANCE = false;
 
 const App = lazy(() => import("./App"));
 
