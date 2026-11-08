@@ -132,6 +132,7 @@ function AcceptDialog({ s, levels, onClose, onDone }: { s: Pending; levels: List
     gd_id: String(s.gd_id),
     video_url: s.video_url,
     fps: s.fps,
+    cbf: "yes",
   });
   const [pos, setPos] = useState("");
   const [note, setNote] = useState("");
@@ -164,6 +165,7 @@ function AcceptDialog({ s, levels, onClose, onDone }: { s: Pending; levels: List
       p_fps: draft.fps.trim() || null,
       p_position: n,
       p_note: note.trim() || null,
+      p_cbf: draft.cbf,
     });
     setBusy(false);
     if (error) return setErr(errorText(error));

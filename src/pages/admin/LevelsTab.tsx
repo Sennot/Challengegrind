@@ -2,12 +2,12 @@ import { useState, type FormEvent } from "react";
 import { ArrowUpDown, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { supabase, errorText } from "../../lib/supabase";
 import { must, useAsync } from "../../lib/useAsync";
-import type { Level } from "../../lib/types";
+import { CBF_LABEL, type Cbf, type Level } from "../../lib/types";
 import { isHttpsUrl } from "../../lib/video";
 import { ErrorBox, PositionBadge, Spinner } from "../../components/ui";
 
-export type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string; fps: string };
-export const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "", fps: "" };
+export type Draft = { name: string; creator: string; verifier: string; gd_id: string; video_url: string; fps: string; cbf: Cbf };
+export const EMPTY: Draft = { name: "", creator: "", verifier: "", gd_id: "", video_url: "", fps: "", cbf: "yes" };
 
 export function validate(d: Draft): string | null {
   if (!d.name.trim() || !d.creator.trim() || !d.verifier.trim()) return "Fill in name, creator and verifier";
@@ -30,7 +30,17 @@ export function DraftFields({ d, set }: { d: Draft; set: (d: Draft) => void }) {
       {f("creator", "Creator(s)")}
       {f("verifier", "Verifier")}
       {f("gd_id", "Level ID", "optional")}
-      {f("fps", "FPS", "FPS or CBF")}
+      {f("fps", "FPS", "e.g. 240 or Any")}
+      <div>
+        <label className="label">CBF</label>
+        <select className="input" value={d.cbf} onChange={(e) => set({ ...d, cbf: e.target.value as Cbf })}>
+          {(Object.keys(CBF_LABEL) as Cbf[]).map((c) => (
+            <option key={c} value={c}>
+              {CBF_LABEL[c]}
+            </option>
+          ))}
+        </select>
+      </div>
       <div>{f("video_url", "Verification video", "https://youtu.be/…")}</div>
     </div>
   );
@@ -58,6 +68,7 @@ export default function LevelsTab() {
       p_video_url: draft.video_url || null,
       p_position: position,
       p_fps: draft.fps.trim() || null,
+      p_cbf: draft.cbf,
     });
     if (error) return setMsg(errorText(error));
     setMsg(`"${draft.name}" added at #${position}`);
@@ -93,6 +104,7 @@ export default function LevelsTab() {
         gd_id: editDraft.gd_id ? Number(editDraft.gd_id) : null,
         video_url: editDraft.video_url.trim() || null,
         fps: editDraft.fps.trim() || null,
+        cbf: editDraft.cbf,
       })
       .eq("id", id);
     if (error) return alert(errorText(error));
@@ -156,7 +168,7 @@ export default function LevelsTab() {
                     title="Edit"
                     onClick={() => {
                       setEditing(l.id);
-                      setEditDraft({ name: l.name, creator: l.creator, verifier: l.verifier, gd_id: l.gd_id ? String(l.gd_id) : "", video_url: l.video_url ?? "", fps: l.fps ?? "" });
+                      setEditDraft({ name: l.name, creator: l.creator, verifier: l.verifier, gd_id: l.gd_id ? String(l.gd_id) : "", video_url: l.video_url ?? "", fps: l.fps ?? "", cbf: l.cbf });
                     }}
                   >
                     <Pencil className="h-4 w-4" />

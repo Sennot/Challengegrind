@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router";
 import { ArrowLeft, Check, Copy, Package, Users } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
-import type { Level, Profile } from "../lib/types";
+import { CBF_LABEL, type Level, type Profile } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { formatDate } from "../lib/time";
 import { Empty, ErrorBox, Flag, Spinner, VideoEmbed, VideoLink } from "../components/ui";
@@ -86,11 +86,12 @@ export default function LevelPage() {
 
       <VideoEmbed url={level.video_url} title={level.name} />
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Points" value={formatPoints(levelPoints(level.position))} />
         <Stat label="Position" value={`#${level.position}`} />
         <Stat label="Victors" value={String(victors.length)} />
         <Stat label="FPS" value={level.fps ?? "—"} />
+        <Stat label="CBF" value={CBF_LABEL[level.cbf] ?? "—"} />
         <div className="card p-3">
           <div className="text-xs text-muted">Level ID</div>
           {level.gd_id ? (

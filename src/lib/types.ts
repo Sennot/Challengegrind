@@ -19,6 +19,9 @@ export interface Profile extends Socials {
   created_at: string;
 }
 
+export type Cbf = "yes" | "no" | "required";
+export const CBF_LABEL: Record<Cbf, string> = { yes: "Yes", no: "No", required: "Required" };
+
 export interface Level {
   id: number;
   name: string;
@@ -29,6 +32,8 @@ export interface Level {
   video_url: string | null;
   /** e.g. "240", "CBF" */
   fps: string | null;
+  /** CBF allowed ("yes"), not allowed ("no") or required */
+  cbf: Cbf;
   position: number;
   created_at: string;
 }
