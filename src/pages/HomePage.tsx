@@ -62,11 +62,9 @@ export default function HomePage() {
       <section className="grid items-center gap-10 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         <div className="max-w-xl">
           <h1 className="text-4xl font-medium leading-[1.06] tracking-[-0.02em] text-white sm:text-5xl xl:text-[56px] xl:tracking-[-0.03em]">
-            The hardest Geometry Dash challenges, ranked
+            Welcome to the ChallengeGrind
           </h1>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-400">
-            Beat a level, send the video and earn points. Every record is checked by the list team.
-          </p>
+          <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-400">Grind the challenges, farm points, clear packs, send your own level!</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/list" className="btn-primary h-11 px-5">
               Open the list
