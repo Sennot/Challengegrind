@@ -19,13 +19,13 @@ export function youtubeId(url: string | null | undefined): string | null {
   return id && YT_ID.test(id) ? id : null;
 }
 
-/** Public Telegram post: t.me/<channel>/<id> or t.me/s/<channel>/<id> → { channel, id } */
+/** Public Telegram post: t.me/<channel>/<id>, t.me/s/<channel>/<id> or a forum topic t.me/<channel>/<topic>/<id> → { channel, id } */
 export function telegramPost(url: string | null | undefined): { channel: string; id: string } | null {
   if (!url) return null;
   try {
     const u = new URL(url);
     if (u.protocol !== "https:" || !["t.me", "telegram.me"].includes(u.hostname.replace(/^www\./, ""))) return null;
-    const m = u.pathname.match(/^\/(?:s\/)?([A-Za-z0-9_]{4,32})\/(\d+)\/?$/);
+    const m = u.pathname.match(/^\/(?:s\/)?([A-Za-z0-9_]{4,32})\/(?:\d+\/)?(\d+)\/?$/);
     return m ? { channel: m[1], id: m[2] } : null;
   } catch {
     return null;
@@ -33,6 +33,18 @@ export function telegramPost(url: string | null | undefined): { channel: string;
 }
 
 export const ytThumb = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+
+/**
+ * Preview image for a verification video. YouTube serves it directly; for Telegram posts
+ * the /tg-thumb Pages Function reads it from the public embed (see functions/tg-thumb).
+ * `large` asks YouTube for hqdefault (its 4:3 letterbox is cropped by object-cover).
+ */
+export function videoThumb(url: string | null | undefined, large = false): string | null {
+  const yt = youtubeId(url);
+  if (yt) return large ? `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` : ytThumb(yt);
+  const tg = telegramPost(url);
+  return tg ? `/tg-thumb/${tg.channel}/${tg.id}` : null;
+}
 export const ytEmbed = (id: string) => `https://www.youtube-nocookie.com/embed/${id}`;
 export const tgEmbed = (p: { channel: string; id: string }) => `https://t.me/${p.channel}/${p.id}?embed=1&dark=1`;
 

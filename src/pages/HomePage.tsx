@@ -8,7 +8,7 @@ import { useMyCompletions } from "../lib/completions";
 import type { ChangelogEntry, LeaderboardRow, Level, Profile } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
 import { timeAgo } from "../lib/time";
-import { youtubeId } from "../lib/video";
+import { videoThumb } from "../lib/video";
 import ChangelogItem from "../components/ChangelogItem";
 import { DoneCheck } from "../components/PackBadge";
 import { ErrorBox, Flag, PositionBadge, Progress, Spinner } from "../components/ui";
@@ -19,12 +19,6 @@ type RecentRecord = {
   reviewed_at: string | null;
   level: Pick<Level, "id" | "name" | "position">;
   player: Pick<Profile, "username" | "country" | "banned">;
-};
-
-/** 16:9 cover from the verification video; hqdefault always exists and its letterbox is cropped away */
-const cover = (url: string | null) => {
-  const id = youtubeId(url);
-  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
 };
 
 export default function HomePage() {
@@ -180,7 +174,7 @@ function TopThree({ levels, done }: { levels: TopLevel[]; done: ReadonlySet<numb
 }
 
 function LevelCover({ level, done, large }: { level: TopLevel; done: boolean; large?: boolean }) {
-  const img = cover(level.video_url);
+  const img = videoThumb(level.video_url, true);
   return (
     <Link to={`/level/${level.id}`} className="group card overflow-hidden transition-colors hover:border-neutral-600">
       <div className="relative aspect-video overflow-hidden bg-surface-2">
@@ -190,6 +184,7 @@ function LevelCover({ level, done, large }: { level: TopLevel; done: boolean; la
             alt={`${level.name} verification`}
             loading={large ? "eager" : "lazy"}
             className="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-90"
+            onError={(e) => (e.currentTarget.style.display = "none")}
           />
         ) : (
           <div className="grid h-full place-items-center text-neutral-600">

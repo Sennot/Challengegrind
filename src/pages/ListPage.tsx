@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 import { must, useAsync } from "../lib/useAsync";
 import type { Level } from "../lib/types";
 import { formatPoints, levelPoints } from "../lib/points";
-import { youtubeId, ytThumb } from "../lib/video";
+import { videoThumb } from "../lib/video";
 import { Empty, ErrorBox, PageHeader, PositionBadge, Spinner } from "../components/ui";
 import { DoneCheck } from "../components/PackBadge";
 import { useMyCompletions } from "../lib/completions";
@@ -64,14 +64,14 @@ export default function ListPage() {
 }
 
 function LevelRow({ level, done }: { level: Level; done: boolean }) {
-  const yt = youtubeId(level.video_url);
+  const thumb = videoThumb(level.video_url);
   const fps = level.fps ? (/^\d+$/.test(level.fps) ? `${level.fps} FPS` : level.fps) : null;
   return (
     <Link to={`/level/${level.id}`} className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-surface-2">
       <PositionBadge position={level.position} />
       {/* frame from the verification video */}
       <div className="hidden aspect-video w-24 shrink-0 overflow-hidden rounded-md bg-surface-2 sm:block">
-        {yt && <img src={ytThumb(yt)} alt="" loading="lazy" className="h-full w-full object-cover" />}
+        {thumb && <img src={thumb} alt="" loading="lazy" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
